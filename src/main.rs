@@ -5,14 +5,7 @@
 // Mod goes before use? Check
 
 use std::collections::HashMap;
-use reqwest::header::HeaderMap;
-use reqwest::header::HeaderValue;
-use reqwest::header::AUTHORIZATION;
-use reqwest::header::CONTENT_TYPE;
 use serde::Deserialize;
-use serde::Serialize;
-use serde_json::Value;
-use smashgg_elo_rust::get_input;
 
 use crate::json::construct_json_content;
 

@@ -17,34 +17,6 @@ use smashgg_elo_rust::get_input;
 #[derive(Deserialize, Debug)] pub struct Tournament { 
     events: Vec<EventStruct> 
 }
-#[derive(Deserialize, Debug)] struct EventStruct {
-    id: i32,
-    name: String,
-    videogame: Videogame
-}
-#[derive(Deserialize, Debug)] struct Videogame {
-    name: String
-}
-#[derive(Deserialize, Debug)] pub struct Event {
-    entrants: Entrants
-}
-#[derive(Deserialize, Debug)] struct Entrants {
-    pageInfo: Pageinfo,
-   // nodes: Option<Nodes>
-}
-
-#[derive(Deserialize, Debug)] struct Pageinfo {
-    totalPages: i32
-}
-#[derive(Serialize, Debug)] pub struct Content {
-    query: String,
-    variables: Variables
-}
-
-#[derive(Serialize, Debug)] pub struct Variables {
-    tournament_slug: Option<String>,
-    event_id: Option<i32>
-}
 
 impl Default for Tournament {
     fn default() -> Self {
@@ -72,6 +44,17 @@ impl Tournament {
         }
     }
 }
+#[derive(Deserialize, Debug)] struct EventStruct {
+    id: i32,
+    name: String,
+    videogame: Videogame
+}
+#[derive(Deserialize, Debug)] struct Videogame {
+    name: String
+}
+#[derive(Deserialize, Debug)] pub struct Event {
+    entrants: Entrants
+}
 
 impl Event {
     pub fn construct_player_map2(self, headers: HeaderMap, event_id: i32) -> Result<(), Box<reqwest::Error>>{
@@ -94,6 +77,23 @@ impl Event {
     
         Ok(())
     }
+}
+#[derive(Deserialize, Debug)] struct Entrants {
+    pageInfo: Pageinfo,
+   // nodes: Option<Nodes>
+}
+
+#[derive(Deserialize, Debug)] struct Pageinfo {
+    totalPages: i32
+}
+#[derive(Serialize, Debug)] pub struct Content {
+    query: String,
+    variables: Variables
+}
+
+#[derive(Serialize, Debug)] pub struct Variables {
+    tournament_slug: Option<String>,
+    event_id: Option<i32>
 }
 
 fn build_player_json(json_content: &mut HashMap<&str, Value>, event_id: i32, page: i32) {
