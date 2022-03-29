@@ -1,0 +1,15 @@
+query EventUserId($eventId:ID!, $page:Int) {
+  event(id:$eventId) {
+    entrants(query: {page: $page}) {
+      nodes {
+        id
+        participants {
+          gamerTag
+          user {
+            id
+          }
+        }
+      }
+    }
+  }
+}

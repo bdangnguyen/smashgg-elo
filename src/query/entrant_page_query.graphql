@@ -1,0 +1,9 @@
+query EntrantTotalPages($event_id:ID!){
+  event(id:$event_id){
+    entrants {
+      pageInfo{
+        totalPages
+      }
+    }
+  }
+}
