@@ -123,15 +123,15 @@ pub fn construct_json_content(json_content: &mut HashMap<&'static str, Value>, c
 
 fn construct_content(query: &'static str, variables: Variables) -> Content {
     Content {
-        query: query,
-        variables: variables,
+        query,
+        variables,
     }
 }
 
 fn construct_variables(tournament_slug: Option<String>, event_id: Option<i32>) -> Variables {
     Variables { 
-        tournament_slug: tournament_slug,
-        event_id: event_id,
+        tournament_slug,
+        event_id,
     }
 }
 
