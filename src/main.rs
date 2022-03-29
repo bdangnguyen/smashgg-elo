@@ -52,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     let json: json::PostResponse = result.json()?;
 
-    let event_id = json.data.tournament.get_event_id();
+    let event_id = json.data.tournament.parse_event_id();
     construct_json_content(&mut json_content, json::event_content(event_id));
 
     result = client.post(smashgg_elo_rust::SMASH_URL)

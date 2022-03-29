@@ -7,8 +7,6 @@ use reqwest::header::HeaderValue;
 
 pub const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";
 pub const AUTH_PROMPT: &str = "Enter your smash.gg authentication token: ";
-pub const SLUG_PROMPT: &str = "Enter the tournament slug to read data from: ";
-pub const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
 
 /// Generic function that takes in a prompt and converts the string to a type.
 pub fn get_input<U: std::str::FromStr>(prompt: &str) -> U {

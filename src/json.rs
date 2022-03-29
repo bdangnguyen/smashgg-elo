@@ -5,6 +5,8 @@ use serde::Serialize;
 use serde_json::Value;
 use smashgg_elo_rust::get_input;
 
+const SLUG_PROMPT: &str = "Enter the tournament slug to read data from: ";
+const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
 
 #[derive(Deserialize, Debug)] pub struct PostResponse { 
     pub data: Data
@@ -25,7 +27,7 @@ impl Default for Tournament {
 }
 
 impl Tournament {
-    pub fn get_event_id(self) -> i32 {
+    pub fn parse_event_id(self) -> i32 {
         loop {
             let mut count = 0;
 
@@ -35,7 +37,7 @@ impl Tournament {
                 count += 1;
             }
 
-            let  event_input: i32= get_input(smashgg_elo_rust::EVNT_PROMPT);
+            let  event_input: i32 = get_input(EVNT_PROMPT);
             match event_input {
                 i if i < 0 => continue,
                 i if i > (self.events.len()-1).try_into().unwrap() => continue,
@@ -134,7 +136,7 @@ fn construct_variables(tournament_slug: Option<String>, event_id: Option<i32>) -
 }
 
 pub fn init_content() -> Content {
-    let tourney_slug: String = get_input(smashgg_elo_rust::SLUG_PROMPT);
+    let tourney_slug: String = get_input(SLUG_PROMPT);
     let query = include_str!("query/tourney_event_query.graphql").to_string();
     let variables = construct_variables(Some(tourney_slug), None);
 
