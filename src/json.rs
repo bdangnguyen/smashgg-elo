@@ -89,7 +89,7 @@ impl Event {
     totalPages: i32
 }
 #[derive(Serialize, Debug)] pub struct Content {
-    query: String,
+    query: &'static str,
     variables: Variables
 }
 
@@ -121,7 +121,7 @@ pub fn construct_json_content(json_content: &mut HashMap<&'static str, Value>, c
     );
 }
 
-fn construct_content(query: String, variables: Variables) -> Content {
+fn construct_content(query: &'static str, variables: Variables) -> Content {
     Content {
         query: query,
         variables: variables,
@@ -137,14 +137,21 @@ fn construct_variables(tournament_slug: Option<String>, event_id: Option<i32>) -
 
 pub fn init_content() -> Content {
     let tourney_slug: String = get_input(SLUG_PROMPT);
-    let query = include_str!("query/tourney_event_query.graphql").to_string();
+    let query = include_str!("query/tourney_event_query.graphql");
     let variables = construct_variables(Some(tourney_slug), None);
 
     construct_content(query, variables)
 }
 
 pub fn event_content(event_id: i32) -> Content {
-    let query = include_str!("query/entrant_page_query.graphql").to_string();
+    let query = include_str!("query/entrant_page_query.graphql");
+    let variables = construct_variables(None, Some(event_id));
+
+    construct_content(query, variables)
+}
+
+pub fn set_content(event_id: i32) -> Content {
+    let query = include_str!("query/sets_page_query.graphql");
     let variables = construct_variables(None, Some(event_id));
 
     construct_content(query, variables)
