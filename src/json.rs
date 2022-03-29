@@ -25,7 +25,7 @@ impl Default for Tournament {
 }
 
 impl Tournament {
-    pub fn list_events(self) -> i32 {
+    pub fn get_event_id(self) -> i32 {
         loop {
             let mut count = 0;
 
