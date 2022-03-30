@@ -7,6 +7,8 @@ use std::collections::HashMap;
 
 pub const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";
 
+/// A wrapper struct around a reqwest blocking Client. It contains the headers
+/// and the json content needed to make a post request to smash.gg's api.
 pub struct ReqwestClient<'a> {
     client: Client,
     headers: HeaderMap,
@@ -24,10 +26,12 @@ impl Default for ReqwestClient<'_> {
 }
 
 impl ReqwestClient<'_> {
+    /// Simple function for that just calls the default constructor.
     pub fn new() -> Self {
         ReqwestClient::default()
     }
 
+    /// Sends a HTTP post request and returns a reqwest response.
     pub fn send_post(&self) -> Response {
         let result = match self
             .client
