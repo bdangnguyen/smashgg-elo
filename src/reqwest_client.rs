@@ -2,32 +2,37 @@ use reqwest::blocking::Client;
 use reqwest::blocking::Response;
 use reqwest::header::HeaderMap;
 use serde_json::Value;
+use smashgg_elo_rust::construct_headers;
 use std::collections::HashMap;
 
-const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";
+pub const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";
 
-pub struct ReqwestClient {
+pub struct ReqwestClient<'a> {
     client: Client,
+    headers: HeaderMap,
+    pub json_content: HashMap<&'a str, Value>,
 }
 
-impl Default for ReqwestClient {
+impl Default for ReqwestClient<'_> {
     fn default() -> Self {
         ReqwestClient {
             client: reqwest::blocking::Client::new(),
+            headers: construct_headers(),
+            json_content: HashMap::new(),
         }
     }
 }
 
-impl ReqwestClient {
+impl ReqwestClient<'_> {
     pub fn new() -> Self {
         ReqwestClient::default()
     }
 
-    pub fn send_post(&self, headers: HeaderMap, json_content: &HashMap<&str, Value>) -> Response {
+    pub fn send_post(&self, json_content: &HashMap<&str, Value>) -> Response {
         let result = match self
             .client
             .post(SMASH_URL)
-            .headers(headers)
+            .headers(self.headers.clone())
             .json(&json_content)
             .send()
         {
