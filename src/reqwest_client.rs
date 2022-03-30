@@ -26,7 +26,7 @@ impl Default for ReqwestClient<'_> {
 }
 
 impl ReqwestClient<'_> {
-    /// Simple function for that just calls the default constructor.
+    /// Simple function that just calls the default constructor.
     pub fn new() -> Self {
         ReqwestClient::default()
     }
