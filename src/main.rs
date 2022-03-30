@@ -3,7 +3,6 @@
 // Consider whether querying using requiredConnections for discord ID is good.
 
 use std::collections::HashMap;
-use reqwest::blocking::Client;
 use serde::Deserialize;
 
 use crate::json::construct_json_content;
@@ -41,32 +40,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Smash.gg Elo Parser 1.0");
 
     let headers = smashgg_elo_rust::construct_headers();
-    let mut json_content = HashMap::new();
-    let reqwest_client = ReqwestClient::new();
-    let client = reqwest::blocking::Client::new();
+    let mut reqwest_client = ReqwestClient::new();
 
-    // Does not handle errors yet
-    construct_json_content(&mut json_content, json::init_content());
-    let mut result = reqwest_client.send_post(headers.clone(), &json_content);
-    let json: json::PostResponse = result.json()?;
+
+    construct_json_content(&mut reqwest_client, json::init_content());
+    let mut result = reqwest_client.send_post();
+    let mut json: json::PostResponse = result.json()?;
     let event_id = json.data.tournament.parse_event_id();
 
-    construct_json_content(&mut json_content, json::event_content(event_id));
-    result = client.post(smashgg_elo_rust::SMASH_URL)
-        .headers(headers.clone())
-        .json(&json_content)
-        .send()?;
-    let json: json::PostResponse = result.json()?;
+    construct_json_content(&mut reqwest_client, json::event_content(event_id));
+    result = reqwest_client.send_post();
+    json = result.json()?;
     let player_map = match json.data.event {
         Some(event) => event.construct_player_map2(headers.clone(), event_id),
         None => panic!("Nothing!"),
     };
 
-    construct_json_content(&mut json_content, json::set_content(event_id));
-    result = client.post(smashgg_elo_rust::SMASH_URL)
-        .headers(headers.clone())
-        .json(&json_content)
-        .send()?;
+    construct_json_content(&mut reqwest_client, json::set_content(event_id));
+    result = reqwest_client.send_post();
     
     println!("{:?}", result.text());
     Ok(())

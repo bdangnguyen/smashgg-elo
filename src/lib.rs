@@ -5,7 +5,6 @@ use reqwest::header::CONTENT_TYPE;
 use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
 
-pub const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";
 pub const AUTH_PROMPT: &str = "Enter your smash.gg authentication token: ";
 
 /// Generic function that takes in a prompt and converts the string to a type.

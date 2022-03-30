@@ -28,12 +28,12 @@ impl ReqwestClient<'_> {
         ReqwestClient::default()
     }
 
-    pub fn send_post(&self, json_content: &HashMap<&str, Value>) -> Response {
+    pub fn send_post(&self) -> Response {
         let result = match self
             .client
             .post(SMASH_URL)
             .headers(self.headers.clone())
-            .json(&json_content)
+            .json(&self.json_content)
             .send()
         {
             Ok(response) => response,

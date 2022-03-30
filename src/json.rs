@@ -4,6 +4,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
 use smashgg_elo_rust::get_input;
+use crate::reqwest_client::ReqwestClient;
+use crate::reqwest_client::SMASH_URL;
 
 const SLUG_PROMPT: &str = "Enter the tournament slug to read data from: ";
 const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
@@ -66,12 +68,10 @@ impl Event {
         for i in 0..self.entrants.pageInfo.totalPages {
             build_player_json(&mut json_content, event_id, i);
 
-            let mut result = client.post(smashgg_elo_rust::SMASH_URL)
+            let mut result = client.post(crate::reqwest_client::SMASH_URL)
                 .headers(headers.clone())
                 .json(&json_content)
                 .send()?;
-
-            //println!("This is the result: {:?}", result.text());
 
             let json: crate::EntrantInfoResponse = result.json()?;
             println!("JSON: {:?}", json);
@@ -110,12 +110,12 @@ fn build_player_json(json_content: &mut HashMap<&str, Value>, event_id: i32, pag
     );
 }
 
-pub fn construct_json_content(json_content: &mut HashMap<&'static str, Value>, content: Content)  {
-    json_content.insert(
+pub fn construct_json_content(reqwest_client: &mut ReqwestClient, content: Content)  {
+    reqwest_client.json_content.insert(
         "query",
         Value::from((content.query))
     );
-    json_content.insert(
+    reqwest_client.json_content.insert(
         "variables",
         serde_json::json!(content.variables)
     );
