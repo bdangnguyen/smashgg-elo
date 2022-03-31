@@ -164,21 +164,6 @@ pub fn construct_json(reqwest_client: &mut ReqwestClient, content: Content)  {
     );
 }
 
-fn construct_content(query: &'static str, variables: Variables) -> Content {
-    Content {
-        query,
-        variables,
-    }
-}
-
-fn construct_variables(tournament_slug: Option<String>, event_id: Option<i32>, page: Option<i32>) -> Variables {
-    Variables { 
-        tournament_slug,
-        event_id,
-        page
-    }
-}
-
 pub fn init_content() -> Content {
     let tourney_slug: String = get_input(SLUG_PROMPT);
     let vars = (Some(tourney_slug), None, None);
