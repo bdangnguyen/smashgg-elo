@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
@@ -26,6 +25,15 @@ pub struct Data {
     #[serde(default)]
     pub tournament: Tournament,
     pub event: Option<Event>
+}
+
+impl Data {
+    fn event(self) -> Event {
+        match self.event {
+            Some(event) => event,
+            None => panic!("Error in matching event! No event found"),
+        }
+    }
 }
 #[derive(Deserialize, Debug)] 
 pub struct Tournament { 
@@ -72,45 +80,53 @@ struct Videogame {
 }
 #[derive(Deserialize, Debug)] 
 pub struct Event {
-    entrants: Entrants
+    entrants: Option<Entrants>,
+    sets: Option<Sets>
 }
 
 impl Event {
+    fn entrants(self) -> Entrants {
+        match self.entrants {
+            Some(entrants) => entrants,
+            None => panic!("Error in matching entrants! No entrants found."),
+        }
+    }
+
+    fn sets(self) -> Option<Sets> {
+        match self.sets {
+            Some(entrants) => Some(entrants),
+            None => None,
+        }
+    }
+
     pub fn construct_player_map(self, reqwest_client: &mut ReqwestClient, event_id: i32) -> HashMap<i32, (String, i32)>{
         let mut player_map = HashMap::new();
 
-        match self.entrants.page_info {
-            Some(page_info) => for i in 0..page_info.total_pages {
-                let vars = (None, Some(event_id), Some(i));
-                let page_content = new_content(ContentType::PageContent, vars);
-                construct_json(reqwest_client, page_content);
+        let page_info = self.entrants().page_info();
 
-                let result = reqwest_client.send_post();
+        for i in 0.. page_info.total_pages {
+            let vars = (None, Some(event_id), Some(i));
+            let page_content = new_content(ContentType::PageContent, vars);
+            construct_json(reqwest_client, page_content);
 
-                let json: PostResponse = match result.json() {
-                    Ok(json) => json,
-                    Err(err) => panic!("Error in converting to json {}", err),
-                };
+            let result = reqwest_client.send_post();
 
-                let nodes = match json.data.event {
-                    Some(event) => event.entrants.nodes,
-                    None => None,
-                };
+            let json: PostResponse = match result.json() {
+                Ok(json) => json,
+                Err(err) => panic!("Error in converting to json {}", err),
+            };
 
-                match nodes {
-                    Some(node_vec) => for player in node_vec {
-                        player_map.insert(
-                            player.id,
-                            (player.participants[0].gamer_tag.to_owned(), player.participants[0].user.id),
-                        );
-                    }
-                    None => (),
-                }
-            },
-            None => panic!("Error in matching page_info!"),
+            let nodes = json.data.event().entrants().nodes();
+
+            for player in nodes {
+                player_map.insert(
+                    player.id,
+                    (player.participants[0].gamer_tag.to_owned(), player.participants[0].user.id),
+                );
+            }
         }
 
-        println!("Map: {:?}", player_map);
+        //println!("Map: {:?}", player_map);
 
         return player_map;
     }
@@ -118,13 +134,36 @@ impl Event {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
  struct Entrants {
-    page_info: Option<Pageinfo>,
+    page_info: Option<PageInfo>,
     nodes: Option<Vec<Nodes>>
+}
+
+impl Entrants {
+    fn page_info(self) -> PageInfo {
+        match self.page_info {
+            Some(page_info) => page_info,
+            None => panic!("Error in matching page_info! No page_info found"),
+        }
+    }
+
+    fn nodes(self) -> Vec<Nodes> {
+        match self.nodes {
+            Some(nodes) => nodes,
+            None => panic!("Error in matching nodes! No nodes found"),
+        }
+    }
+}
+
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct Sets {
+    page_info: PageInfo
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
- struct Pageinfo {
+ struct PageInfo {
     total_pages: i32
 }
 #[derive(Deserialize, Debug)] struct Nodes {
@@ -141,7 +180,8 @@ struct Participants {
 struct User {
     id: i32
 }
-#[derive(Serialize, Debug)] pub struct Content {
+#[derive(Serialize, Debug)] 
+pub struct Content {
     query: &'static str,
     variables: Variables
 }
@@ -167,6 +207,7 @@ pub fn construct_json(reqwest_client: &mut ReqwestClient, content: Content)  {
 pub fn init_content() -> Content {
     let tourney_slug: String = get_input(SLUG_PROMPT);
     let vars = (Some(tourney_slug), None, None);
+
     new_content(ContentType::InitContent, vars)
 }
 

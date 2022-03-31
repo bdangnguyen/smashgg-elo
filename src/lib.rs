@@ -5,7 +5,7 @@ use reqwest::header::HeaderValue;
 use std::io;
 use std::io::Write;
 
-pub const AUTH_PROMPT: &str = "Enter your smash.gg authentication token: ";
+const AUTH_PROMPT: &str = "Enter your smash.gg authentication token: ";
 
 /// Generic function that takes in a prompt and converts the string to a type.
 pub fn get_input<U: std::str::FromStr>(prompt: &str) -> U {

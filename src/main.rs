@@ -29,7 +29,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     content = new_content(ContentType::SetContent, vars);
     construct_json(&mut reqwest_client, content);
     result = reqwest_client.send_post();
+    json = result.json()?;
     
-    println!("{:?}", result.text());
+    println!("JSON: {:?}", json);
     Ok(())
 }

@@ -1,0 +1,28 @@
+query SetsInfo($eventId:ID!, $page:Int, $perPage:Int) {
+  event(id:$eventId) {
+    sets(
+      page: $page
+      perPage: $perPage
+      sortType:CALL_ORDER) {
+      pageInfo {
+        totalPages
+        total
+      }
+      nodes {
+        completedAt
+        slots {
+          entrant {
+            id
+          }
+          standing {
+            stats {
+              score {
+                value
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
