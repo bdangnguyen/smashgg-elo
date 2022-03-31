@@ -72,11 +72,6 @@ impl Tournament {
 struct Events {
     id: i32,
     name: String,
-    videogame: Videogame
-}
-#[derive(Deserialize, Debug)] 
-struct Videogame {
-    name: String
 }
 #[derive(Deserialize, Debug)] 
 pub struct Event {

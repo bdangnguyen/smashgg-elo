@@ -3,9 +3,6 @@ query TourneyEvents($tournament_slug: String!) {
     events {
       id
       name
-      videogame {
-        name
-      }
     }
   }
 }
