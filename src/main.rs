@@ -1,6 +1,6 @@
 // TODO: Maybe edit the tourney query to remove videogame
 // Consider whether querying using requiredConnections for discord ID is good.
-use crate::json::construct_json;
+use crate::json::{construct_json, ContentType, new_content};
 use crate::reqwest_client::ReqwestClient;
 
 mod json;
@@ -16,15 +16,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut json: json::PostResponse = result.json()?;
     let event_id = json.data.tournament.parse_event_id();
 
-    construct_json(&mut reqwest_client, json::event_content(event_id));
+    let vars = (None, Some(event_id), None);
+    let mut content = new_content(ContentType::EventContent, vars.clone());
+    construct_json(&mut reqwest_client, content);
     result = reqwest_client.send_post();
     json = result.json()?;
-     let player_map = match json.data.event {
+    let player_map = match json.data.event {
         Some(event) => event.construct_player_map(&mut reqwest_client, event_id),
         None => panic!("Nothing!"),
     };
 
-    construct_json(&mut reqwest_client, json::set_content(event_id));
+    content = new_content(ContentType::SetContent, vars);
+    construct_json(&mut reqwest_client, content);
     result = reqwest_client.send_post();
     
     println!("{:?}", result.text());

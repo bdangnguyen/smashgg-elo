@@ -10,6 +10,13 @@ use crate::reqwest_client::ReqwestClient;
 const SLUG_PROMPT: &str = "Enter the tournament slug to read data from: ";
 const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
 
+pub enum ContentType {
+    InitContent,
+    EventContent,
+    SetContent,
+    PageContent,
+}
+
 #[derive(Deserialize, Debug)] 
 pub struct PostResponse { 
     pub data: Data
@@ -74,7 +81,9 @@ impl Event {
 
         match self.entrants.page_info {
             Some(page_info) => for i in 0..page_info.total_pages {
-                construct_json(reqwest_client, page_content(event_id, i));
+                let vars = (None, Some(event_id), Some(i));
+                let page_content = new_content(ContentType::PageContent, vars);
+                construct_json(reqwest_client, page_content);
 
                 let result = reqwest_client.send_post();
 
@@ -172,31 +181,28 @@ fn construct_variables(tournament_slug: Option<String>, event_id: Option<i32>, p
 
 pub fn init_content() -> Content {
     let tourney_slug: String = get_input(SLUG_PROMPT);
-    let query = include_str!("query/tourney_event_query.graphql");
-    let variables = construct_variables(Some(tourney_slug), None, None);
-
-    construct_content(query, variables)
+    let vars = (Some(tourney_slug), None, None);
+    new_content(ContentType::InitContent, vars)
 }
 
+pub fn new_content(enum_type: ContentType, vars: (Option<String>, Option<i32>, Option<i32>)) -> Content {
+    let query = match enum_type {
+        ContentType::InitContent => include_str!("query/tourney_event_query.graphql"),
+        ContentType::EventContent => include_str!("query/entrant_page_query.graphql"),
+        ContentType::SetContent => include_str!("query/sets_page_query.graphql"),
+        ContentType::PageContent => include_str!("query/entrant_info_query.graphql"),
+    };
 
+    let variables = Variables {
+        tournament_slug: vars.0,
+        event_id: vars.1,
+        page: vars.2
+    };
 
-pub fn event_content(event_id: i32) -> Content {
-    let query = include_str!("query/entrant_page_query.graphql");
-    let variables = construct_variables(None, Some(event_id), None);
+    let content = Content {
+        query,
+        variables
+    };
 
-    construct_content(query, variables)
-}
-
-pub fn set_content(event_id: i32) -> Content {
-    let query = include_str!("query/sets_page_query.graphql");
-    let variables = construct_variables(None, Some(event_id), None);
-
-    construct_content(query, variables)
-}
-
-pub fn page_content(event_id: i32, page: i32) -> Content {
-    let query = include_str!("query/entrant_info_query.graphql");
-    let variables = construct_variables(None, Some(event_id), Some(page));
-
-    construct_content(query, variables)
+    return content;
 }

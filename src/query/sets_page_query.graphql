@@ -1,0 +1,11 @@
+query SetsTotalPages($event_id:ID!,$perPage:Int) {
+  event(id:$event_id){
+    sets(
+      perPage: $perPage
+      sortType:CALL_ORDER){
+      pageInfo {
+        totalPages
+      }
+    }
+  }
+}
