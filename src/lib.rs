@@ -1,9 +1,9 @@
-use std::io;
-use std::io::Write;
 use reqwest::header::AUTHORIZATION;
 use reqwest::header::CONTENT_TYPE;
 use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
+use std::io;
+use std::io::Write;
 
 pub const AUTH_PROMPT: &str = "Enter your smash.gg authentication token: ";
 

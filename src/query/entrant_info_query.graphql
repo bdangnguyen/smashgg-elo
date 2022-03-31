@@ -1,5 +1,5 @@
-query EventUserId($eventId:ID!, $page:Int) {
-  event(id:$eventId) {
+query EventUserId($event_id:ID!, $page:Int) {
+  event(id:$event_id) {
     entrants(query: {page: $page}) {
       nodes {
         id

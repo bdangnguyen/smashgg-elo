@@ -31,7 +31,9 @@ impl ReqwestClient<'_> {
         ReqwestClient::default()
     }
 
-    /// Sends a HTTP post request and returns a reqwest response.
+    /// Sends a HTTP post request using the header and json fields in the 
+    /// struct and returns a reqwest response. This reqwest will later be
+    /// parsed into json by other methods.
     pub fn send_post(&self) -> Response {
         let result = match self
             .client
