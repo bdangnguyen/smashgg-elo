@@ -70,10 +70,10 @@ pub struct Event {
 
 impl Event {
     pub fn construct_player_map(self, reqwest_client: &mut ReqwestClient, event_id: i32) -> HashMap<i32, (String, i32)>{
-        let player_map = HashMap::new();
+        let mut player_map = HashMap::new();
 
-        match self.entrants.pageInfo {
-            Some(page_info) => for i in 0..page_info.totalPages {
+        match self.entrants.page_info {
+            Some(page_info) => for i in 0..page_info.total_pages {
                 construct_json(reqwest_client, page_content(event_id, i));
 
                 let result = reqwest_client.send_post();
@@ -82,29 +82,50 @@ impl Event {
                     Ok(json) => json,
                     Err(err) => panic!("Error in converting to json {}", err),
                 };
-                println!("JSON: {:?}", json);
+
+                let nodes = match json.data.event {
+                    Some(event) => event.entrants.nodes,
+                    None => None,
+                };
+
+                match nodes {
+                    Some(node_vec) => for player in node_vec {
+                        player_map.insert(
+                            player.id,
+                            (player.participants[0].gamer_tag.to_owned(), player.participants[0].user.id),
+                        );
+                    }
+                    None => (),
+                }
             },
             None => panic!("Error in matching page_info!"),
         }
 
+        println!("Map: {:?}", player_map);
+
         return player_map;
     }
 }
-#[derive(Deserialize, Debug)] struct Entrants {
-    pageInfo: Option<Pageinfo>,
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+ struct Entrants {
+    page_info: Option<Pageinfo>,
     nodes: Option<Vec<Nodes>>
 }
 
-#[derive(Deserialize, Debug)] struct Pageinfo {
-    totalPages: i32
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+ struct Pageinfo {
+    total_pages: i32
 }
 #[derive(Deserialize, Debug)] struct Nodes {
     id: i32,
     participants: Vec<Participants>
 }
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct Participants {
-    gamerTag: String,
+    gamer_tag: String,
     user: User
 }
 #[derive(Deserialize, Debug)]
