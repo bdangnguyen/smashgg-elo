@@ -41,7 +41,7 @@ impl Default for ReqwestClient<'_> {
             client: reqwest::blocking::Client::builder()
             .default_headers(headers)
             .build()
-            .expect("Error in creating the reqwest client."),
+            .expect("Error in creating the reqwest client"),
             json_content: HashMap::new(),
         }
     }
@@ -57,16 +57,11 @@ impl ReqwestClient<'_> {
     /// struct and returns a reqwest response. This reqwest will later be
     /// parsed into json by other methods.
     pub fn send_post(&self) -> Response {
-        let result = match self
-            .client
-            .post(SMASH_URL)
-            .json(&self.json_content)
-            .send()
-        {
-            Ok(response) => response,
-            Err(err) => panic!("Error in sending post request: {}", err),
-        };
-
-        return result;
+        self
+        .client
+        .post(SMASH_URL)
+        .json(&self.json_content)
+        .send()
+        .expect("Error in sending post request")
     }
 }
