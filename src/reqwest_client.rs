@@ -1,25 +1,47 @@
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
+use reqwest::header::AUTHORIZATION;
+use reqwest::header::CONTENT_TYPE;
 use reqwest::header::HeaderMap;
+use reqwest::header::HeaderValue;
 use serde_json::Value;
-use smashgg_elo_rust::construct_headers;
 use std::collections::HashMap;
+use smashgg_elo_rust::get_input;
 
-pub const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";
+const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";
+const AUTH_PROMPT: &str = "Enter your smash.gg authentication token: ";
+
 
 /// A wrapper struct around a reqwest blocking Client. It contains the headers
 /// and the json content needed to make a post request to smash.gg's api.
 pub struct ReqwestClient<'a> {
     client: Client,
-    headers: HeaderMap,
     pub json_content: HashMap<&'a str, Value>,
 }
 
 impl Default for ReqwestClient<'_> {
+    /// Reads in user input to grab their smash.gg authentication token.
+    /// Assigns the AUTHORIZATION header to Bearer [auth_token] and assigns the
+    /// CONTENT_TYPE header so we're taking in json on our post request.
     fn default() -> Self {
+        let mut headers = HeaderMap::new();
+        let mut auth_token: String = get_input(AUTH_PROMPT);
+        auth_token = "Bearer ".to_owned() + &auth_token;
+
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&auth_token).unwrap()
+        );
+        headers.insert(
+            CONTENT_TYPE,
+            HeaderValue::from_static("application/json")
+        );
+
         ReqwestClient {
-            client: reqwest::blocking::Client::new(),
-            headers: construct_headers(),
+            client: reqwest::blocking::Client::builder()
+            .default_headers(headers)
+            .build()
+            .expect("Error in creating the reqwest client."),
             json_content: HashMap::new(),
         }
     }
@@ -38,7 +60,6 @@ impl ReqwestClient<'_> {
         let result = match self
             .client
             .post(SMASH_URL)
-            .headers(self.headers.clone())
             .json(&self.json_content)
             .send()
         {
