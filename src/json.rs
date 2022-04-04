@@ -59,10 +59,11 @@ impl Tournament {
                 count += 1;
             }
 
-            let  event_input: i32 = get_input(EVNT_PROMPT);
+            let event_input: i32 = get_input(EVNT_PROMPT);
+            let num_events: usize = self.events.len() - 1;
             match event_input {
                 i if i < 0 => continue,
-                i if i > (self.events.len()-1).try_into().unwrap() => continue,
+                i if i > (num_events).try_into().unwrap() => continue,
                 _ =>  return self.events[event_input as usize].id
             };
         }
@@ -126,6 +127,7 @@ impl Event {
         return player_map;
     }
 }
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
  struct Entrants {

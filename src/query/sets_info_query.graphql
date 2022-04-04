@@ -4,10 +4,6 @@ query SetsInfo($eventId:ID!, $page:Int, $perPage:Int) {
       page: $page
       perPage: $perPage
       sortType:CALL_ORDER) {
-      pageInfo {
-        totalPages
-        total
-      }
       nodes {
         completedAt
         slots {
