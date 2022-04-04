@@ -23,9 +23,11 @@ pub struct PostResponse {
 
 impl PostResponse {
     pub fn get_event_id(self) -> i32 {
+        let tournament = self.data.tournament();
+        let num_evnts: i32 = (tournament.events.len() - 1).try_into().unwrap();
+        
         loop {
             let mut count = 0;
-            let tournament = self.data.tournament();
 
             println!("List of events found in the tournament:");
             for event in &tournament.events {
@@ -34,10 +36,9 @@ impl PostResponse {
             }
 
             let event_input: i32 = get_input(EVNT_PROMPT);
-            let num_events = tournament.events.len() - 1;
             match event_input {
                 i if i < 0 => continue,
-                i if i > (num_events).try_into().unwrap() => continue,
+                i if i > (num_evnts).try_into().unwrap() => continue,
                 _ =>  return tournament.events[event_input as usize].id
             };
         }
