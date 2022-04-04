@@ -17,21 +17,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     construct_json(&mut reqwest_client, json::init_content());
     let mut json: json::PostResponse = reqwest_client.send_post().json()?;
-    let event_id = json.data.tournament.parse_event_id();
+    let event_id = json.get_event_id();
 
     let vars = (None, Some(event_id), None);
     let mut content = new_content(ContentType::EventContent, vars.clone());
     construct_json(&mut reqwest_client, content);
     json = reqwest_client.send_post().json()?;
-    let player_map = match json.data.event {
-        Some(event) => event.construct_player_map(&mut reqwest_client, event_id),
-        None => panic!("Nothing!"),
-    };
+    let player_map = json.construct_player_map(&mut reqwest_client, event_id);
 
     content = new_content(ContentType::SetContent, vars);
     construct_json(&mut reqwest_client, content);
     json = reqwest_client.send_post().json()?;
+
+    let num_set_pages = json.get_total_pages();
     
-    println!("JSON: {:?}", json);
+    println!("JSON: {:?}", num_set_pages);
     Ok(())
 }
