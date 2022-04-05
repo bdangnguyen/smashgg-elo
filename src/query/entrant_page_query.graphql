@@ -1,7 +1,7 @@
-query EntrantTotalPages($event_id:ID!){
-  event(id:$event_id){
-    entrants {
-      pageInfo{
+query EntrantTotalPages($event_id:ID!, $per_page:Int){
+  event(id: $event_id) {
+    entrants(query: {perPage: $per_page}) {
+      pageInfo {
         totalPages
       }
     }

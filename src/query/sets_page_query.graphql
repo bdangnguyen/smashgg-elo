@@ -1,7 +1,8 @@
-query SetsTotalPages($event_id:ID!) {
+query SetsTotalPages($event_id:ID!, $per_page:Int) {
   event(id:$event_id){
     sets(
-      sortType:CALL_ORDER){
+      sortType:CALL_ORDER
+      perPage:$per_page){
       pageInfo {
         totalPages
       }

@@ -8,12 +8,20 @@ use crate::reqwest_client::ReqwestClient;
 
 const SLUG_PROMPT: &str = "Enter the tournament slug to read data from: ";
 const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
+const MAX_ENTRANTS: i32 = 499;
+const MAX_SETS: i32 = 70;
 
 pub enum ContentType {
     InitContent,
     EventContent,
     SetContent,
+    InfoContent,
     PageContent,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TestResponse {
+    data: Value
 }
 
 #[derive(Deserialize, Debug)] 
@@ -177,7 +185,8 @@ pub struct Content {
 pub struct Variables {
     tournament_slug: Option<String>,
     event_id: Option<i32>,
-    page: Option<i32>
+    page: Option<i32>,
+    per_page: Option<i32>
 }
 
 pub fn construct_json(reqwest_client: &mut ReqwestClient, content: Content)  {
@@ -199,17 +208,34 @@ pub fn init_content() -> Content {
 }
 
 pub fn new_content(enum_type: ContentType, vars: (Option<String>, Option<i32>, Option<i32>)) -> Content {
-    let query = match enum_type {
-        ContentType::InitContent => include_str!("query/tourney_event_query.graphql"),
-        ContentType::EventContent => include_str!("query/entrant_page_query.graphql"),
-        ContentType::SetContent => include_str!("query/sets_page_query.graphql"),
-        ContentType::PageContent => include_str!("query/entrant_info_query.graphql"),
+    let (query, per_page) = match enum_type {
+        ContentType::InitContent => {
+            (include_str!("query/tourney_event_query.graphql"),
+            None)
+        }
+        ContentType::EventContent => {
+            (include_str!("query/entrant_page_query.graphql"),
+            Some(MAX_ENTRANTS))
+        }
+        ContentType::SetContent => {
+            (include_str!("query/sets_page_query.graphql"),
+            Some(MAX_SETS))
+        }
+        ContentType::InfoContent => {
+            (include_str!("query/sets_info_query.graphql"),
+            Some(MAX_SETS))
+        }
+        ContentType::PageContent => {
+            (include_str!("query/entrant_info_query.graphql"),
+            Some(MAX_ENTRANTS))
+        }
     };
 
     let variables = Variables {
         tournament_slug: vars.0,
         event_id: vars.1,
-        page: vars.2
+        page: vars.2,
+        per_page
     };
 
     let content = Content {

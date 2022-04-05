@@ -1,8 +1,8 @@
-query SetsInfo($eventId:ID!, $page:Int, $perPage:Int) {
-  event(id:$eventId) {
+query SetsInfo($event_id:ID!, $page:Int, $per_page:Int) {
+  event(id:$event_id) {
     sets(
       page: $page
-      perPage: $perPage
+      perPage: $per_page
       sortType:CALL_ORDER) {
       nodes {
         completedAt
