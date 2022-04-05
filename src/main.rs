@@ -2,19 +2,18 @@
 // Consider whether querying using requiredConnections for discord ID is good.
 // Look into the leaky bucket algorithm for traffic shaping.
 use crate::json::{construct_json, ContentType, new_content};
-use crate::reqwest_client::ReqwestClient;
-//use rusqlite::Connection;
+use crate::reqwest_wrapper::ReqwestClient;
+use crate::rusqlite_wrapper::RusqliteConnection;
 
 mod json;
-mod reqwest_client;
+mod reqwest_wrapper;
+mod rusqlite_wrapper;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Smash.gg Elo Parser 1.0");
-    //let path = "./database/smashhgg.db3";
-    //let conn = Connection::open(path)?;
-    //println!("Testing: {}", conn.is_autocommit());
 
     let mut reqwest_client = ReqwestClient::new();
+    let rusqlite_connection = RusqliteConnection::new();
 
     construct_json(&mut reqwest_client, json::init_content());
     let mut json: json::PostResponse = reqwest_client.send_post().json()?;
@@ -43,5 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     
     println!("JSON: {:?}", num_set_pages);
+
+    rusqlite_connection.get_player();
     Ok(())
 }

@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::Value;
 use smashgg_elo_rust::get_input;
 
-use crate::reqwest_client::ReqwestClient;
+use crate::reqwest_wrapper::ReqwestClient;
 
 const SLUG_PROMPT: &str = "Enter the tournament slug to read data from: ";
 const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
