@@ -19,11 +19,6 @@ pub enum ContentType {
     PageContent,
 }
 
-#[derive(Deserialize, Debug)]
-pub struct TestResponse {
-    data: Value
-}
-
 #[derive(Deserialize, Debug)] 
 pub struct PostResponse { 
     data: Data
@@ -53,7 +48,7 @@ impl PostResponse {
     }
 
     pub fn get_total_pages(self) -> i32 {
-        self.data.event().sets().page_info.total_pages
+        self.data.event().sets().page_info().total_pages
     }
 
     pub fn construct_player_map(self, reqwest_client: &mut ReqwestClient, event_id: i32) -> HashMap<i32, (String, i32)>{
@@ -77,8 +72,8 @@ impl PostResponse {
 
             for player in nodes {
                 player_map.insert(
-                    player.id,
-                    (player.participants[0].gamer_tag.to_owned(), player.participants[0].user.id),
+                    player.id(),
+                    (player.participants()[0].gamer_tag.to_owned(), player.participants()[0].user.id),
                 );
             }
         }
@@ -141,7 +136,7 @@ impl Event {
 
 impl Entrants {
     fn page_info(self) -> PageInfo {
-        self.page_info.expect("Matching error: No page info found")
+        self.page_info.expect("Matching error: No page info found in entrants")
     }
 
     fn nodes(self) -> Vec<Nodes> {
@@ -153,7 +148,14 @@ impl Entrants {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Sets {
-    page_info: PageInfo
+    page_info: Option<PageInfo>,
+    nodes: Option<Vec<Nodes>>
+}
+
+impl Sets {
+    fn page_info(self) -> PageInfo {
+        self.page_info.expect("Matching error: No page info found in sets")
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -161,10 +163,25 @@ struct Sets {
  struct PageInfo {
     total_pages: i32
 }
-#[derive(Deserialize, Debug)] struct Nodes {
-    id: i32,
-    participants: Vec<Participants>
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+ struct Nodes {
+    id: Option<i32>,
+    participants: Option<Vec<Participants>>,
+    completed_at: Option<i32>,
+    slots: Option<Vec<Slots>>,
 }
+
+impl Nodes {
+    fn id(&self) -> i32 {
+        self.id.expect("Matching error: No id found")
+    }
+
+    fn participants(&self) -> &Vec<Participants> {
+        self.participants.as_ref().expect("Matching error: No participants found")
+    }
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Participants {
@@ -175,6 +192,29 @@ struct Participants {
 struct User {
     id: i32
 }
+
+#[derive(Deserialize, Debug)]
+struct Slots {
+    entrant: Entrant,
+    standing: Standing
+}
+#[derive(Deserialize, Debug)]
+struct Entrant {
+    id: i32
+}
+#[derive(Deserialize, Debug)]
+struct Standing {
+    stats: Stats
+}
+#[derive(Deserialize, Debug)]
+struct Stats {
+    score: Score
+}
+#[derive(Deserialize, Debug)]
+struct Score {
+    value: i32
+}
+
 #[derive(Serialize, Debug)] 
 pub struct Content {
     query: &'static str,

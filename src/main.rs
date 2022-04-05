@@ -38,7 +38,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let vars = (None, Some(event_id), Some(i));
         let content = new_content(ContentType::InfoContent, vars.clone());
         construct_json(&mut reqwest_client, content);
-        println!("TEST: {:?}", reqwest_client.send_post().text());
+        let json: json::PostResponse = reqwest_client.send_post().json()?;
+        println!("TEST: {:?}", json);
     }
     
     println!("JSON: {:?}", num_set_pages);
