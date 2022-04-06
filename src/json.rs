@@ -51,6 +51,27 @@ impl PostResponse {
         self.data.event().sets().page_info().total_pages
     }
 
+    pub fn get_num_sets(self) -> Vec<Nodes> {
+        self.data.event().sets().nodes()
+    }
+
+    pub fn get_sets_info(self) -> Vec<(i32, i32, i32, i32)> {
+        let mut set_info = Vec::new();
+
+        let player_nodes = self.data.event().sets().nodes();
+        for node in player_nodes {
+            let player_one = &node.slots()[0];
+            let player_two = &node.slots()[1];
+            let player_one_id = player_one.entrant.id;
+            let player_two_id = player_two.entrant.id;
+            let player_one_score = player_one.standing.stats.score.value;
+            let player_two_score = player_two.standing.stats.score.value;
+            set_info.push((player_one_id, player_one_score, player_two_id, player_two_score));
+        }
+
+        return set_info;
+    }
+
     pub fn construct_player_map(self, reqwest_client: &mut ReqwestClient, event_id: i32) -> HashMap<i32, (String, i32)>{
         let mut player_map = HashMap::new();
 
@@ -140,7 +161,7 @@ impl Entrants {
     }
 
     fn nodes(self) -> Vec<Nodes> {
-        self.nodes.expect("Matching error: No nodes found")
+        self.nodes.expect("Matching error: No nodes found in etrants")
     }
 }
 
@@ -155,6 +176,10 @@ struct Sets {
 impl Sets {
     fn page_info(self) -> PageInfo {
         self.page_info.expect("Matching error: No page info found in sets")
+    }
+
+    fn nodes(self) -> Vec<Nodes> {
+        self.nodes.expect("Matching error: No nodes found in sets")
     }
 }
 
@@ -179,6 +204,10 @@ impl Nodes {
 
     fn participants(&self) -> &Vec<Participants> {
         self.participants.as_ref().expect("Matching error: No participants found")
+    }
+
+    fn slots(&self) -> &Vec<Slots> {
+        self.slots.as_ref().expect("Matching error: No slots found")
     }
 }
 

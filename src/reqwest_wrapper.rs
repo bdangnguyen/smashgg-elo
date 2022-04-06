@@ -48,7 +48,6 @@ impl Default for ReqwestClient<'_> {
 }
 
 impl ReqwestClient<'_> {
-    // Function that just calls the default constructor.
     pub fn new() -> Self {
         ReqwestClient::default()
     }

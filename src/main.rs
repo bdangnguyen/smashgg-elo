@@ -1,10 +1,10 @@
-// TODO: Maybe edit the tourney query to remove videogame
-// Consider whether querying using requiredConnections for discord ID is good.
+// TODO: Consider whether querying using requiredConnections for discord ID is good.
 // Look into the leaky bucket algorithm for traffic shaping.
 use crate::json::{construct_json, ContentType, new_content};
 use crate::reqwest_wrapper::ReqwestClient;
-use crate::rusqlite_wrapper::RusqliteConnection;
+use crate::rusqlite_wrapper::{RusqliteConnection, SetsRow, PlayersRow};
 
+mod elo;
 mod json;
 mod reqwest_wrapper;
 mod rusqlite_wrapper;
@@ -39,10 +39,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         construct_json(&mut reqwest_client, content);
         let json: json::PostResponse = reqwest_client.send_post().json()?;
         println!("TEST: {:?}", json);
+
+        for set in json.get_sets_info() {
+            let player_one_name = &player_map[&set.0].0;
+            let player_one_global_id = player_map[&set.0].1;
+            let player_two_name = &player_map[&set.2].0;
+            let player_two_global_id = player_map[&set.2].1;
+
+            let player_one = rusqlite_connection.select_player(player_one_global_id, player_one_name)?;
+            let player_two = rusqlite_connection.select_player(player_two_global_id, player_two_name)?;
+
+            /*let set = rusqlite_wrapper::SetsRow {
+                player_one_global_id,
+                player_one_name: player_one_name.to_string(),
+                player_one_elo: player_one.player_elo,
+                player_one_score: set.1,
+                player_one_elo_delta: todo!(),
+                player_two_global_id,
+                player_two_name: player_two_name.to_string(),
+                player_two_elo: player_two.player_elo,
+                player_two_score: set.3,
+                player_two_elo_delta: todo!(),
+                tournament_name: todo!(),
+                set_time: todo!(),
+            };*/
+        }
+
     }
     
     println!("JSON: {:?}", num_set_pages);
 
-    rusqlite_connection.get_player();
     Ok(())
 }
