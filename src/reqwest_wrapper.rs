@@ -109,7 +109,7 @@ impl Content {
     }
 
     pub fn edit_content(&mut self, enum_type: ContentType) {
-        let (query, per_page) = match enum_type {
+        (self.query, self.variables.per_page) = match enum_type {
             ContentType::InitContent => {
                 self.variables.tournament_slug = Some(get_input(SLUG_PROMPT));
                 (include_str!("query/tourney_event_query.graphql"),
@@ -132,9 +132,6 @@ impl Content {
                 Some(MAX_ENTRANTS))
             }
         };
-
-        self.variables.per_page = per_page;
-        self.query = query;
     }
 }
 
