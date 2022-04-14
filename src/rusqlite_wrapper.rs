@@ -6,32 +6,30 @@ pub struct RusqliteConnection {
     conn: Connection
 }
 
-#[derive(Debug)]
 pub struct PlayersRow {
     pub global_id: i32,
     pub player_name: String,
     pub player_rank: i32,
-    pub player_elo: i32,
+    pub player_elo: f64,
     pub player_num_games: i32,
     pub player_wins: i32,
     pub player_losses: i32,
     pub player_win_loss_ratio: f64,
     pub player_num_tournaments: i32,
     pub player_tournament_wins: i32,
-    pub is_provisional: i32
 }
 
 pub struct SetsRow {
     pub player_one_global_id: i32,
     pub player_one_name: String,
-    pub player_one_elo: i32,
+    pub player_one_elo: f64,
     pub player_one_score: i32,
-    pub player_one_elo_delta: i32,
+    pub player_one_elo_delta: f64,
     pub player_two_global_id: i32,
     pub player_two_name: String,
-    pub player_two_elo: i32,
+    pub player_two_elo: f64,
     pub player_two_score: i32,
-    pub player_two_elo_delta: i32,
+    pub player_two_elo_delta: f64,
     pub tournament_name: String,
     pub set_time: String
 }
@@ -47,14 +45,13 @@ impl Default for RusqliteConnection {
                 global_id               INTEGER NOT NULL PRIMARY KEY UNIQUE,
                 player_name             TEXT NOT NULL,
                 player_rank             INTEGER DEFAULT 0 NOT NULL,
-                player_elo              INTEGER DEFAULT 1500 NOT NULL,
+                player_elo              REAL DEFAULT 1500.0 NOT NULL,
                 player_num_games        INTEGER DEFAULT 0 NOT NULL,
                 player_wins             INTEGER DEFAULT 0 NOT NULL,
                 player_losses           INTEGER DEFAULT 0 NOT NULL,
                 player_win_loss_ratio   REAL DEFAULT 0.0 NOT NULL,
                 player_num_tournaments  INTEGER DEFAULT 0 NOT NULL,
-                player_tournament_wins  INTEGER DEFAULT 0 NOT NULL,
-                is_provisional          INTEGER DEFAULT 1 NOT NULL
+                player_tournament_wins  INTEGER DEFAULT 0 NOT NULL
             )",
             []
         ).expect("Creating player table failed");
@@ -65,14 +62,14 @@ impl Default for RusqliteConnection {
                 id                      INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                 player_one_global_id    INTEGER NOT NULL,
                 player_one_name         TEXT NOT NULL,
-                player_one_elo          INTEGER NOT NULL,
+                player_one_elo          REAL NOT NULL,
                 player_one_score        INTEGER NOT NULL,
-                player_one_elo_delta    INTEGER NOT NULL,
+                player_one_elo_delta    REAL NOT NULL,
                 player_two_global_id    INTEGER NOT NULL,
                 player_two_name         TEXT NOT NULL,
-                player_two_elo          INTEGER NOT NULL,
+                player_two_elo          REAL NOT NULL,
                 player_two_score        INTEGER NOT NULL,
-                player_two_elo_delta    INTEGER NOT NULL,
+                player_two_elo_delta    REAL NOT NULL,
                 tournament_name         TEXT NOT NULL,
                 set_time                TEXT NOT NULL
             )",
@@ -114,7 +111,6 @@ impl RusqliteConnection {
                 player_win_loss_ratio: row.get(7)?,
                 player_num_tournaments: row.get(8)?,
                 player_tournament_wins: row.get(9)?,
-                is_provisional: row.get(10)?,
             })
         })?;
 

@@ -1,23 +1,15 @@
 use std::collections::HashMap;
 use serde::Deserialize;
-use serde::Serialize;
-use serde_json::Value;
 use smashgg_elo_rust::get_input;
 
+use crate::reqwest_wrapper::Content;
 use crate::reqwest_wrapper::ReqwestClient;
+use crate::reqwest_wrapper::ContentType;
 
 const SLUG_PROMPT: &str = "Enter the tournament slug to read data from: ";
 const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
 const MAX_ENTRANTS: i32 = 499;
 const MAX_SETS: i32 = 70;
-
-pub enum ContentType {
-    InitContent,
-    EventContent,
-    SetContent,
-    InfoContent,
-    PageContent,
-}
 
 #[derive(Deserialize, Debug)] 
 pub struct PostResponse { 
@@ -25,7 +17,7 @@ pub struct PostResponse {
 }
 
 impl PostResponse {
-    pub fn get_event_id(self) -> i32 {
+    pub fn get_event_info(self) -> (i32, String) {
         let tournament = self.data.tournament();
         let num_evnts: i32 = (tournament.events.len() - 1).try_into().unwrap();
         
@@ -42,7 +34,10 @@ impl PostResponse {
             match event_input {
                 i if i < 0 => continue,
                 i if i > (num_evnts).try_into().unwrap() => continue,
-                _ =>  return tournament.events[event_input as usize].id
+                _ =>  {
+                    let info = &tournament.events[event_input as usize];
+                    return (info.id, info.name.to_owned());
+                }
             };
         }
     }
@@ -51,11 +46,7 @@ impl PostResponse {
         self.data.event().sets().page_info().total_pages
     }
 
-    pub fn get_num_sets(self) -> Vec<Nodes> {
-        self.data.event().sets().nodes()
-    }
-
-    pub fn get_sets_info(self) -> Vec<(i32, i32, i32, i32)> {
+    pub fn get_sets_info(self) -> Vec<(i32, i32, i32, i32, i64)> {
         let mut set_info = Vec::new();
 
         let player_nodes = self.data.event().sets().nodes();
@@ -66,7 +57,7 @@ impl PostResponse {
             let player_two_id = player_two.entrant.id;
             let player_one_score = player_one.standing.stats.score.value;
             let player_two_score = player_two.standing.stats.score.value;
-            set_info.push((player_one_id, player_one_score, player_two_id, player_two_score));
+            set_info.push((player_one_id, player_one_score, player_two_id, player_two_score, node.completed_at()));
         }
 
         return set_info;
@@ -78,9 +69,11 @@ impl PostResponse {
         let page_info = self.data.event().entrants().page_info();
 
         for i in 0.. page_info.total_pages {
-            let vars = (None, Some(event_id), Some(i));
-            let page_content = new_content(ContentType::PageContent, vars);
-            construct_json(reqwest_client, page_content);
+            let mut content = Content::new();
+            content.variables.event_id = Some(event_id);
+            content.variables.page = Some(i);
+            content.edit_content(ContentType::PageContent);
+            reqwest_client.construct_json(&content);
 
             let result = reqwest_client.send_post();
 
@@ -193,7 +186,7 @@ impl Sets {
  struct Nodes {
     id: Option<i32>,
     participants: Option<Vec<Participants>>,
-    completed_at: Option<i32>,
+    completed_at: Option<i64>,
     slots: Option<Vec<Slots>>,
 }
 
@@ -204,6 +197,10 @@ impl Nodes {
 
     fn participants(&self) -> &Vec<Participants> {
         self.participants.as_ref().expect("Matching error: No participants found")
+    }
+
+    fn completed_at(&self) -> i64 {
+        self.completed_at.expect("Matching error: No time found")
     }
 
     fn slots(&self) -> &Vec<Slots> {
@@ -242,75 +239,4 @@ struct Stats {
 #[derive(Deserialize, Debug)]
 struct Score {
     value: i32
-}
-
-#[derive(Serialize, Debug)] 
-pub struct Content {
-    query: &'static str,
-    variables: Variables
-}
-
-#[derive(Serialize, Debug)] 
-pub struct Variables {
-    tournament_slug: Option<String>,
-    event_id: Option<i32>,
-    page: Option<i32>,
-    per_page: Option<i32>
-}
-
-pub fn construct_json(reqwest_client: &mut ReqwestClient, content: Content)  {
-    reqwest_client.json_content.insert(
-        "query",
-        Value::from(content.query)
-    );
-    reqwest_client.json_content.insert(
-        "variables",
-        serde_json::json!(content.variables)
-    );
-}
-
-pub fn init_content() -> Content {
-    let tourney_slug: String = get_input(SLUG_PROMPT);
-    let vars = (Some(tourney_slug), None, None);
-
-    new_content(ContentType::InitContent, vars)
-}
-
-pub fn new_content(enum_type: ContentType, vars: (Option<String>, Option<i32>, Option<i32>)) -> Content {
-    let (query, per_page) = match enum_type {
-        ContentType::InitContent => {
-            (include_str!("query/tourney_event_query.graphql"),
-            None)
-        }
-        ContentType::EventContent => {
-            (include_str!("query/entrant_page_query.graphql"),
-            Some(MAX_ENTRANTS))
-        }
-        ContentType::SetContent => {
-            (include_str!("query/sets_page_query.graphql"),
-            Some(MAX_SETS))
-        }
-        ContentType::InfoContent => {
-            (include_str!("query/sets_info_query.graphql"),
-            Some(MAX_SETS))
-        }
-        ContentType::PageContent => {
-            (include_str!("query/entrant_info_query.graphql"),
-            Some(MAX_ENTRANTS))
-        }
-    };
-
-    let variables = Variables {
-        tournament_slug: vars.0,
-        event_id: vars.1,
-        page: vars.2,
-        per_page
-    };
-
-    let content = Content {
-        query,
-        variables
-    };
-
-    return content;
 }
