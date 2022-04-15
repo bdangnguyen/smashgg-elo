@@ -117,7 +117,33 @@ impl RusqliteConnection {
         player_iter.last().expect("Getting a player from the database failed")
     }
 
-    pub fn insert_match(&self) {
-        //self.conn.execute();
+    pub fn insert_match(&self, match_info: SetsRow) {
+        self.conn.execute(
+            "INSERT INTO sets (player_one_global_id,
+                    player_one_name,
+                    player_one_elo,
+                    player_one_score,
+                    player_one_elo_delta,
+                    player_two_global_id,
+                    player_two_name,
+                    player_two_elo,
+                    player_two_score,
+                    player_two_elo_delta,
+                    tournament_name,
+                    set_time)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            params![match_info.player_one_global_id,
+            match_info.player_one_name,
+            match_info.player_one_elo,
+            match_info.player_one_score,
+            match_info.player_one_elo_delta,
+            match_info.player_two_global_id,
+            match_info.player_two_name,
+            match_info.player_two_elo,
+            match_info.player_two_score,
+            match_info.player_two_elo_delta,
+            match_info.tournament_name,
+            match_info.set_time]
+        ).expect("Inserting match into database failed");
     }
 }

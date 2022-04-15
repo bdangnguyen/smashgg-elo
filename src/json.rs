@@ -1,15 +1,11 @@
 use std::collections::HashMap;
 use serde::Deserialize;
 use smashgg_elo_rust::get_input;
-
 use crate::reqwest_wrapper::Content;
 use crate::reqwest_wrapper::ReqwestClient;
 use crate::reqwest_wrapper::ContentType;
 
-const SLUG_PROMPT: &str = "Enter the tournament slug to read data from: ";
 const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
-const MAX_ENTRANTS: i32 = 499;
-const MAX_SETS: i32 = 70;
 
 #[derive(Deserialize, Debug)] 
 pub struct PostResponse { 
@@ -46,21 +42,25 @@ impl PostResponse {
         self.data.event().sets().page_info().total_pages
     }
 
-    pub fn get_sets_info(self) -> Vec<(i32, i32, i32, i32, i64)> {
-        let mut set_info = Vec::new();
+    pub fn get_sets_info(self) -> Vec<SetInfo> {
+        let mut set_vec = Vec::new();
 
         let player_nodes = self.data.event().sets().nodes();
         for node in player_nodes {
             let player_one = &node.slots()[0];
             let player_two = &node.slots()[1];
-            let player_one_id = player_one.entrant.id;
-            let player_two_id = player_two.entrant.id;
-            let player_one_score = player_one.standing.stats.score.value;
-            let player_two_score = player_two.standing.stats.score.value;
-            set_info.push((player_one_id, player_one_score, player_two_id, player_two_score, node.completed_at()));
+            set_vec.push(
+                SetInfo {
+                    player_one_id: player_one.entrant.id,
+                    player_one_score: player_one.standing.stats.score.value,
+                    player_two_id: player_two.entrant.id,
+                    player_two_score: player_two.standing.stats.score.value,
+                    time: node.completed_at()
+                }
+            );
         }
 
-        return set_info;
+        return set_vec;
     }
 
     pub fn construct_player_map(self, reqwest_client: &mut ReqwestClient, event_id: i32) -> HashMap<i32, (String, i32)>{
@@ -91,8 +91,6 @@ impl PostResponse {
                 );
             }
         }
-
-        //println!("Map: {:?}", player_map);
 
         return player_map;
     }
@@ -239,4 +237,12 @@ struct Stats {
 #[derive(Deserialize, Debug)]
 struct Score {
     value: i32
+}
+
+pub struct SetInfo {
+    pub player_one_id: i32,
+    pub player_one_score: i32,
+    pub player_two_id: i32,
+    pub player_two_score: i32,
+    pub time: i64
 }
