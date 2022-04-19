@@ -55,14 +55,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let player_one = rusqlite_connection.select_player(player_one_global_id, &player_one_name)?;
             let player_two = rusqlite_connection.select_player(player_two_global_id, &player_two_name)?;
 
-            let elo_calc = elo::Elo {
+            let mut elo_calc = elo::Elo {
                 player_one,
                 player_one_score: set.player_one_score,
                 player_two,
                 player_two_score: set.player_two_score
             };
 
-            let (new_elo_one, new_elo_two) = elo_calc.calc_elo();
+            let (player_one_elo_delta, player_two_elo_delta) = elo_calc.calc_elo();
             let dt = Utc.timestamp(set.time, 0);
 
             rusqlite_connection.insert_match(
@@ -71,16 +71,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     player_one_name: player_one_name.to_string(),
                     player_one_elo: elo_calc.player_one.player_elo,
                     player_one_score: set.player_one_score,
-                    player_one_elo_delta: new_elo_one - elo_calc.player_one.player_elo,
+                    player_one_elo_delta,
                     player_two_global_id,
                     player_two_name: player_two_name.to_string(),
                     player_two_elo: elo_calc.player_two.player_elo,
                     player_two_score: set.player_two_score,
-                    player_two_elo_delta: new_elo_two - elo_calc.player_two.player_elo,
+                    player_two_elo_delta,
                     tournament_name: event_name.clone(),
                     set_time: dt.to_rfc3339(),
                 }
             );
+
+            // Detect if DQ'd. If so, don't update.
+            if set.player_one_score != -1 && set.player_two_score != -1 {
+                rusqlite_connection.update_player(elo_calc.player_one);
+                rusqlite_connection.update_player(elo_calc.player_two);
+            }
         }
 
     }

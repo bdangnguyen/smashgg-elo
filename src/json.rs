@@ -49,12 +49,13 @@ impl PostResponse {
         for node in player_nodes {
             let player_one = &node.slots()[0];
             let player_two = &node.slots()[1];
+            
             set_vec.push(
                 SetInfo {
-                    player_one_id: player_one.entrant.id,
-                    player_one_score: player_one.standing.stats.score.value,
-                    player_two_id: player_two.entrant.id,
-                    player_two_score: player_two.standing.stats.score.value,
+                    player_one_id: player_one.entrant().id,
+                    player_one_score: player_one.standing().stats.score.value,
+                    player_two_id: player_two.entrant().id,
+                    player_two_score: player_two.standing().stats.score.value,
                     time: node.completed_at()
                 }
             );
@@ -219,8 +220,18 @@ struct User {
 
 #[derive(Deserialize, Debug)]
 struct Slots {
-    entrant: Entrant,
-    standing: Standing
+    entrant: Option<Entrant>,
+    standing: Option<Standing>
+}
+
+impl Slots {
+    fn entrant(&self) -> &Entrant {
+        self.entrant.as_ref().expect("Matching error: No entrant found")
+    }
+
+    fn standing(&self) -> &Standing {
+        self.standing.as_ref().expect("Matching error: No standing found")
+    }
 }
 #[derive(Deserialize, Debug)]
 struct Entrant {

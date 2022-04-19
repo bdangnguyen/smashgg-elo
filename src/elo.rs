@@ -25,7 +25,7 @@ impl Elo {
         return (ex_score_one, ex_score_two);
     }
 
-    pub fn calc_elo(&self) -> (f64, f64) {
+    pub fn calc_elo(&mut self) -> (f64, f64) {
         let k_factor_one = match self.player_one.player_num_games {
             i if i < K_FACTOR_LIMIT => K_FACTOR_PROVISIONAL,
             _ => K_FACTOR_STANDARD
@@ -36,8 +36,26 @@ impl Elo {
         };
 
         let (ex_score_one, ex_score_two) = self.expected_scores(self.player_one_score + self.player_two_score);
-        let elo_one = self.player_one.player_elo + (k_factor_one * (self.player_one_score as f64 - ex_score_one));
-        let elo_two = self.player_two.player_elo + (k_factor_two * (self.player_two_score as f64 - ex_score_two));
-        return (elo_one, elo_two);
+        let mut player_one_delta = k_factor_one * (self.player_one_score as f64 - ex_score_one);
+        let mut player_two_delta = k_factor_two * (self.player_two_score as f64 - ex_score_two);
+
+        if self.player_one_score == -1 || self.player_two_score == -1 {
+            player_one_delta = 0.0;
+            player_two_delta = 0.0;
+        }
+
+        self.player_one.player_elo += player_one_delta;
+        self.player_one.player_num_games += self.player_one_score + self.player_two_score;
+        self.player_one.player_wins += self.player_one_score;
+        self.player_one.player_losses += self.player_two_score;
+        self.player_one.player_win_loss_ratio = self.player_one.player_wins as f64 / self.player_one.player_num_games as f64;
+
+        self.player_two.player_elo += k_factor_two * (self.player_two_score as f64 - ex_score_two);
+        self.player_two.player_num_games += self.player_one_score + self.player_two_score;
+        self.player_two.player_wins += self.player_two_score;
+        self.player_two.player_losses += self.player_one_score;
+        self.player_two.player_win_loss_ratio = self.player_two.player_wins as f64 / self.player_two.player_num_games as f64;
+
+        return (player_one_delta, player_two_delta);
     }
 }

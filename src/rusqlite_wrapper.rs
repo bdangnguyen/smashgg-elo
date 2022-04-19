@@ -49,7 +49,7 @@ impl Default for RusqliteConnection {
                 player_num_games        INTEGER DEFAULT 0 NOT NULL,
                 player_wins             INTEGER DEFAULT 0 NOT NULL,
                 player_losses           INTEGER DEFAULT 0 NOT NULL,
-                player_win_loss_ratio   REAL DEFAULT 0.0 NOT NULL,
+                player_win_loss_ratio   REAL DEFAULT 0 NOT NULL,
                 player_num_tournaments  INTEGER DEFAULT 0 NOT NULL,
                 player_tournament_wins  INTEGER DEFAULT 0 NOT NULL
             )",
@@ -116,6 +116,25 @@ impl RusqliteConnection {
 
         player_iter.last().expect("Getting a player from the database failed")
     }
+
+    pub fn update_player(&self, player: PlayersRow) {
+        println!("Player ratio: {}", player.player_win_loss_ratio);
+        self.conn.execute(
+            "UPDATE players SET 
+                    player_elo = ?1, 
+                    player_num_games = ?2, 
+                    player_wins = ?3,
+                    player_losses = ?4,
+                    player_win_loss_ratio = ?5
+                WHERE global_id = ?6",
+            params![player.player_elo,
+            player.player_num_games,
+            player.player_wins,
+            player.player_losses,
+            player.player_win_loss_ratio,
+            player.global_id]
+        ).expect("Updating player info failed");
+    }           
 
     pub fn insert_match(&self, match_info: SetsRow) {
         self.conn.execute(
