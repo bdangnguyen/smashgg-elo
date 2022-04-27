@@ -1,9 +1,5 @@
-use reqwest::blocking::Client;
-use reqwest::blocking::Response;
-use reqwest::header::AUTHORIZATION;
-use reqwest::header::CONTENT_TYPE;
-use reqwest::header::HeaderMap;
-use reqwest::header::HeaderValue;
+use reqwest::blocking::{Client, Response};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -23,12 +19,11 @@ pub enum ContentType {
     PageContent,
 }
 
-
 // A wrapper struct around a reqwest blocking Client. It contains the headers
 // and the json content needed to make a post request to smash.gg's api.
 pub struct ReqwestClient<'a> {
-    pub client: Client,
-    pub json_content: HashMap<&'a str, Value>,
+    client: Client,
+    json_content: HashMap<&'a str, Value>,
 }
 
 impl Default for ReqwestClient<'_> {
@@ -76,6 +71,8 @@ impl ReqwestClient<'_> {
         .expect("Error in sending post request")
     }
 
+    // Changes the json content in the HTTP post request. Only changes the
+    // values for query and the values for variables.
     pub fn construct_json(&mut self, content: &Content)  {
         self.json_content.insert(
             "query",
@@ -88,6 +85,9 @@ impl ReqwestClient<'_> {
     }
 }
 
+// Struct that contains all of the necessary information needed to get the
+// right data back from smash.gg's api. This includes the graphql query and
+// the relevant variables that will be converted into json to send.
 #[derive(Serialize)] 
 pub struct Content {
     pub query: &'static str,
@@ -108,6 +108,8 @@ impl Content {
         Content::default()
     }
 
+    // Changes the query and the per_page variable sent through the HTTP post
+    // request.
     pub fn edit_content(&mut self, enum_type: ContentType) {
         (self.query, self.variables.per_page) = match enum_type {
             ContentType::InitContent => {
@@ -135,6 +137,8 @@ impl Content {
     }
 }
 
+// Struct that contains the variables that we send with our HTTP post request.
+// Not all variables need to be present with each request.
 #[derive(Serialize)] 
 pub struct Variables {
     pub tournament_slug: Option<String>,

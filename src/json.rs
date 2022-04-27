@@ -13,7 +13,7 @@ pub struct PostResponse {
 }
 
 impl PostResponse {
-    pub fn get_event_info(self) -> (i32, String) {
+    pub fn get_event_info(self) -> (i32, String, String) {
         let tournament = self.data.tournament();
         let num_evnts: i32 = (tournament.events.len() - 1).try_into().unwrap();
         
@@ -22,7 +22,7 @@ impl PostResponse {
 
             println!("List of events found in the tournament:");
             for event in &tournament.events {
-                println!("{}: {:?}", count, event.name);
+                println!("{}: {:?} - {:?}", count, event.videogame.name, event.name);
                 count += 1;
             }
 
@@ -32,7 +32,7 @@ impl PostResponse {
                 i if i > (num_evnts).try_into().unwrap() => continue,
                 _ =>  {
                     let info = &tournament.events[event_input as usize];
-                    return (info.id, info.name.to_owned());
+                    return (info.id, info.videogame.name.to_owned(), info.name.to_owned());
                 }
             };
         }
@@ -49,7 +49,7 @@ impl PostResponse {
         for node in player_nodes {
             let player_one = &node.slots()[0];
             let player_two = &node.slots()[1];
-            
+
             set_vec.push(
                 SetInfo {
                     player_one_id: player_one.entrant().id,
@@ -123,6 +123,11 @@ struct Tournament {
 struct Events {
     id: i32,
     name: String,
+    videogame: Videogame
+}
+#[derive(Deserialize, Debug)]
+struct Videogame {
+    name: String
 }
 #[derive(Deserialize, Debug)] 
 struct Event {

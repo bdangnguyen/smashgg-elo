@@ -1,11 +1,14 @@
-// TODO: Check schema interaction for match table. cumulative id? different set time format? Is provisional needed?
-use rusqlite::Connection;
-use rusqlite::params;
+use rusqlite::{Connection, Error, params};
+use std::collections::HashMap;
+use smashgg_elo_rust::scrub_string;
 
+// Wrapper struct representing a connection to a sqlite database.
 pub struct RusqliteConnection {
     conn: Connection
 }
 
+// Struct that represents a row in the players table. This contains all of the
+// data and statistics of a player's performance in a tournament over time.
 pub struct PlayersRow {
     pub global_id: i32,
     pub player_name: String,
@@ -19,6 +22,9 @@ pub struct PlayersRow {
     pub player_tournament_wins: i32,
 }
 
+// Struct that represents a row in the sets table. This contains all of the
+// details of a set that happened between two players in a tournament, and the
+// changes to the elo that happened as a result of the set.
 pub struct SetsRow {
     pub player_one_global_id: i32,
     pub player_one_name: String,
@@ -31,13 +37,42 @@ pub struct SetsRow {
     pub player_two_score: i32,
     pub player_two_elo_delta: f64,
     pub tournament_name: String,
+    pub game_name: String,
     pub set_time: String
+}
+
+impl Default for SetsRow {
+    fn default() -> Self {
+        SetsRow {
+            player_one_global_id: -1,
+            player_one_name: "Player 1".to_string(),
+            player_one_elo: 0.0,
+            player_one_score: 0,
+            player_one_elo_delta: 0.0,
+            player_two_global_id: -2,
+            player_two_name: "Player 2".to_string(),
+            player_two_elo: 0.0,
+            player_two_score: 0,
+            player_two_elo_delta: 0.0,
+            tournament_name: "Default Tournament".to_string(),
+            game_name: "Default Game".to_string(),
+            set_time: "".to_string()
+        }
+    }
+}
+
+// Wrapper struct for the ease of working with an iterator when updating elo
+// and updating statistics such as tournament count.
+#[derive(Debug)]
+pub struct ItrStruct {
+    pub itr_int: i32
 }
 
 impl Default for RusqliteConnection {
     fn default() -> Self {
         // Initialize connection to the sqlite db.
-        let conn = Connection::open("./database/smashhgg.db3").expect("Connecting to database failed");
+        let conn = Connection::open("./database/smashhgg.db3")
+            .expect("Connecting to database failed");
 
         // Initialize the player table if there is none.
         conn.execute(
@@ -58,7 +93,7 @@ impl Default for RusqliteConnection {
 
         // Initialize the set history table if there is none.
         conn.execute(
-        "CREATE TABLE IF NOT EXISTS sets (
+            "CREATE TABLE IF NOT EXISTS sets (
                 id                      INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                 player_one_global_id    INTEGER NOT NULL,
                 player_one_name         TEXT NOT NULL,
@@ -71,6 +106,7 @@ impl Default for RusqliteConnection {
                 player_two_score        INTEGER NOT NULL,
                 player_two_elo_delta    REAL NOT NULL,
                 tournament_name         TEXT NOT NULL,
+                game_name               TEST NOT NULL,
                 set_time                TEXT NOT NULL
             )",
             []
@@ -87,56 +123,92 @@ impl RusqliteConnection {
         RusqliteConnection::default()
     }
 
-    pub fn select_player(&self, global_id: i32, player_name: &String) -> Result<PlayersRow, rusqlite::Error> {
+    pub fn create_table(&self, table_name: &String) {
+        // Initialize a game table if there is none.
+        let table_beg = "CREATE TABLE IF NOT EXISTS ";
+        let table_end = "(
+            global_id               INTEGER NOT NULL PRIMARY KEY UNIQUE,
+            player_name             TEXT NOT NULL,
+            player_rank             INTEGER DEFAULT 0 NOT NULL,
+            player_elo              REAL DEFAULT 1500.0 NOT NULL,
+            player_num_games        INTEGER DEFAULT 0 NOT NULL,
+            player_wins             INTEGER DEFAULT 0 NOT NULL,
+            player_losses           INTEGER DEFAULT 0 NOT NULL,
+            player_win_loss_ratio   REAL DEFAULT 0 NOT NULL,
+            player_num_tournaments  INTEGER DEFAULT 0 NOT NULL,
+            player_tournament_wins  INTEGER DEFAULT 0 NOT NULL
+        )";
+        let table_stmt = format!("{} {} {}", table_beg, scrub_string(table_name), table_end);
+        self.conn.execute(table_stmt.as_str(), []).expect("Creating a game table failed");
+    }
+
+    // Given a global id, and the player name, the function searches the 
+    // database for any existing record of the player participating in a
+    // tournament. If no such record exists, it will create one.
+    pub fn select_player(&self, global_id: i32, player_name: &String, table_name: &String) -> Result<PlayersRow, Error> {
         // If the player does not exist in the database, create a default
         // record for the player in the sqlite database.
-        self.conn.execute(
-            "INSERT OR IGNORE into players (global_id, player_name) VALUES (?1,?2)",
+        let insert_beg = "INSERT OR IGNORE INTO";
+        let insert_end = "(global_id, player_name) VALUES (?1,?2)";
+        let insert_stmt = format!("{} {} {}", insert_beg, scrub_string(table_name), insert_end);
+        self.conn.execute(insert_stmt.as_str(),
             params![global_id, player_name]
         )?;
         
+        let select_beg = "SELECT * FROM";
+        let select_end = "WHERE global_id = ?1";
+        let select_stmt = format!("{} {} {}", select_beg, scrub_string(table_name), select_end);
         // Find the row in the player table that matches to the id. Once found
         // create a PlayerRow object to use.
-        let mut stmt = self.conn.prepare("SELECT * FROM players WHERE global_id=?1")?;
-        let player_iter = stmt.query_map(params![global_id], |row| {
-        Ok(
-            PlayersRow {
-                global_id,
-                player_name: row.get(1)?,
-                player_rank: row.get(2)?,
-                player_elo: row.get(3)?,
-                player_num_games: row.get(4)?,
-                player_wins: row.get(5)?,
-                player_losses: row.get(6)?,
-                player_win_loss_ratio: row.get(7)?,
-                player_num_tournaments: row.get(8)?,
-                player_tournament_wins: row.get(9)?,
-            })
-        })?;
+        let mut stmt = self.conn.prepare(select_stmt.as_str())?;
+        let player_iter = stmt.query_map(params![global_id], |row| 
+            { Ok(
+                PlayersRow {
+                    global_id,
+                    player_name: row.get(1)?,
+                    player_rank: row.get(2)?,
+                    player_elo: row.get(3)?,
+                    player_num_games: row.get(4)?,
+                    player_wins: row.get(5)?,
+                    player_losses: row.get(6)?,
+                    player_win_loss_ratio: row.get(7)?,
+                    player_num_tournaments: row.get(8)?,
+                    player_tournament_wins: row.get(9)?,
+                })
+            }
+        )?;
 
         player_iter.last().expect("Getting a player from the database failed")
     }
 
-    pub fn update_player(&self, player: PlayersRow) {
-        println!("Player ratio: {}", player.player_win_loss_ratio);
+    // Updates player information in the database after elo calculations have
+    // been made.
+    pub fn update_player(&self, player: PlayersRow, table_name: &String) {
+        let update_beg = "UPDATE";
+        let update_end = "SET 
+            player_elo = ?1,
+            player_num_games = ?2, 
+            player_wins = ?3,
+            player_losses = ?4,
+            player_win_loss_ratio = ?5
+        WHERE global_id = ?6";
+        let update_stmt = format!("{} {} {}", update_beg, scrub_string(table_name), update_end);
         self.conn.execute(
-            "UPDATE players SET 
-                    player_elo = ?1, 
-                    player_num_games = ?2, 
-                    player_wins = ?3,
-                    player_losses = ?4,
-                    player_win_loss_ratio = ?5
-                WHERE global_id = ?6",
-            params![player.player_elo,
-            player.player_num_games,
-            player.player_wins,
-            player.player_losses,
-            player.player_win_loss_ratio,
-            player.global_id]
+            update_stmt.as_str(),
+            params![
+                player.player_elo,
+                player.player_num_games,
+                player.player_wins,
+                player.player_losses,
+                player.player_win_loss_ratio,
+                player.global_id
+            ]
         ).expect("Updating player info failed");
     }           
 
-    pub fn insert_match(&self, match_info: SetsRow) {
+    // Records the result of the set and any information regarding changes in
+    // elo into the database.
+    pub fn insert_set(&self, match_info: SetsRow) {
         self.conn.execute(
             "INSERT INTO sets (player_one_global_id,
                     player_one_name,
@@ -149,20 +221,83 @@ impl RusqliteConnection {
                     player_two_score,
                     player_two_elo_delta,
                     tournament_name,
+                    game_name,
                     set_time)
-                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
-            params![match_info.player_one_global_id,
-            match_info.player_one_name,
-            match_info.player_one_elo,
-            match_info.player_one_score,
-            match_info.player_one_elo_delta,
-            match_info.player_two_global_id,
-            match_info.player_two_name,
-            match_info.player_two_elo,
-            match_info.player_two_score,
-            match_info.player_two_elo_delta,
-            match_info.tournament_name,
-            match_info.set_time]
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            params![
+                match_info.player_one_global_id,
+                match_info.player_one_name,
+                match_info.player_one_elo,
+                match_info.player_one_score,
+                match_info.player_one_elo_delta,
+                match_info.player_two_global_id,
+                match_info.player_two_name,
+                match_info.player_two_elo,
+                match_info.player_two_score,
+                match_info.player_two_elo_delta,
+                match_info.tournament_name,
+                match_info.game_name,
+                match_info.set_time
+            ]
         ).expect("Inserting match into database failed");
+    }
+
+    // Simply selects all of the players who have at least one completed set
+    // and updates the elo rankings in the database.
+    pub fn update_ranking(&self, table_name: &String) -> Result<(), rusqlite::Error> {
+        // Select all players in the database and order by elo.
+        let mut count = 1;
+        let rank_stmt = format!("SELECT global_id FROM {} ORDER BY player_elo DESC", scrub_string(table_name));
+        let mut stmt = self.conn.prepare(&rank_stmt.to_string())?;
+        let rank_iter = stmt.query_map([], |row| 
+            Ok(
+                ItrStruct {
+                    itr_int: row.get(0)?
+                }
+            )
+        )?;
+
+        // Iterate through each player in the database and update rankings.
+        let ranking_stmt = format!("UPDATE {} SET player_rank = ?1 WHERE global_id =?2", scrub_string(table_name));
+        for player_id in rank_iter {
+            let mut stmt = self.conn.prepare(&ranking_stmt.to_string())?;
+
+            match player_id {
+                Ok(player) => {
+                    stmt.execute(params![count, player.itr_int])?;
+                    count += 1;
+                },
+                Err(err) => println!("Error updating rankings: {}", err),
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn increment_count(&self, player_map: &HashMap<i32, (String, i32)>, table_name: &String)  -> Result<(), rusqlite::Error>{
+        for player in player_map.values() {
+            let incr_stmt = format!("SELECT player_num_tournaments FROM {} WHERE global_id = {}", scrub_string(table_name), player.1);
+            let mut stmt = self.conn.prepare(&incr_stmt.to_string())?;
+            let mut incr_iter = stmt.query_map([], |row| 
+                Ok(
+                    ItrStruct {
+                        itr_int: row.get(0)?
+                    }
+                )
+            )?.peekable();
+
+            if incr_iter.peek().is_some() {
+                match incr_iter.last().expect("!") {
+                    Ok(incr_stat) => {
+                        let update_stmt = format!("UPDATE {} SET player_num_tournaments = ?1 WHERE global_id = ?2", scrub_string(table_name));
+                        stmt = self.conn.prepare(&update_stmt.to_string())?;
+                        stmt.execute(params![incr_stat.itr_int + 1, player.1])?;
+                    }
+                    Err(err) => println!("Error updating number of tournaments: {}", err),
+                }
+            }
+        }
+
+        Ok(())
     }
 }
