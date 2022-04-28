@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     content.edit_content(ContentType::EventContent);
     reqwest_client.construct_json(&content);
     json = reqwest_client.send_post().json()?;
-    let player_map = json.construct_player_map(&mut reqwest_client, event_id);
+    let players = json.construct_players(&mut reqwest_client, event_id);
 
     // Grab the amount of times we need to make a request to parse all sets.
     content.edit_content(ContentType::SetContent);
@@ -47,16 +47,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         content.edit_content(ContentType::InfoContent);
         reqwest_client.construct_json(&content);
         json = reqwest_client.send_post().json()?;
+        let set_list = json.get_sets_info();
+        let mut count = 1;
 
         // p1 tourney id, p1 score, p2 tourney id, p2 score, time
-        for set in json.get_sets_info() {
-            let player_one_name = &player_map[&set.player_one_id].0;
-            let player_one_global_id = player_map[&set.player_one_id].1;
-            let player_two_name = &player_map[&set.player_two_id].0;
-            let player_two_global_id = player_map[&set.player_two_id].1;
+        for set in &set_list {
+            let player_one_name = &players[&set.player_one_id].0;
+            let player_one_global_id = players[&set.player_one_id].1;
+            let player_two_name = &players[&set.player_two_id].0;
+            let player_two_global_id = players[&set.player_two_id].1;
             let dt = Utc.timestamp(set.time, 0);
             
-            let set_struct = rusqlite_wrapper::SetsRow {
+            let mut set_struct = rusqlite_wrapper::SetsRow {
                 player_one_global_id,
                 player_one_name: player_one_name.to_string(),
                 player_one_score: set.player_one_score,
@@ -74,50 +76,114 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if set.player_one_score == -1 || set.player_two_score == -1 {
                 rusqlite_connection.insert_set(set_struct);
             } else {
-                let global_player_one = rusqlite_connection.select_player(player_one_global_id, &player_one_name, &PLAYERS.to_string())?;
-                let global_player_two = rusqlite_connection.select_player(player_two_global_id, &player_two_name, &PLAYERS.to_string())?;
-                let game_player_one = rusqlite_connection.select_player(player_one_global_id, &player_one_name, &game_name)?;
-                let game_player_two = rusqlite_connection.select_player(player_two_global_id, &player_two_name, &game_name)?;
+                // Select both players from the global players table and the
+                // game table in the sqlite database.
+                let global_player_one = rusqlite_connection.select_player(
+                    player_one_global_id,
+                    &player_one_name,
+                    &PLAYERS.to_string()
+                )?;
+                let global_player_two = rusqlite_connection.select_player(
+                    player_two_global_id,
+                    &player_two_name,
+                    &PLAYERS.to_string()
+                )?;
+                let game_player_one = rusqlite_connection.select_player(
+                    player_one_global_id,
+                    &player_one_name,
+                    &game_name
+                )?;
+                let game_player_two = rusqlite_connection.select_player(
+                    player_two_global_id,
+                    &player_two_name,
+                    &game_name
+                )?;
 
 
-                let mut global_elo_calc = elo::Elo {
+                let mut global_elo = elo::Elo {
                     player_one: global_player_one,
-                    player_one_score: set.player_one_score,
+                    score_one: set.player_one_score,
                     player_two: global_player_two,
-                    player_two_score: set.player_two_score
+                    score_two: set.player_two_score
                 };
-                let mut game_elo_calc = elo::Elo {
+                let mut game_elo = elo::Elo {
                     player_one: game_player_one,
-                    player_one_score: set.player_one_score,
+                    score_one: set.player_one_score,
                     player_two: game_player_two,
-                    player_two_score: set.player_two_score
+                    score_two: set.player_two_score
                 };
 
-                let (global_player_one_elo_delta, global_player_two_elo_delta) = global_elo_calc.calc_elo();
-                let (_game_player_one_elo_delta, _game_player_two_elo_delta) = game_elo_calc.calc_elo();
+                // Record the elo before the change
+                set_struct.player_one_elo = global_elo.player_one.elo;
+                set_struct.player_two_elo = global_elo.player_two.elo;
 
-                let set_struct  = rusqlite_wrapper::SetsRow {
-                    player_one_elo: global_elo_calc.player_one.player_elo,
-                    player_one_elo_delta: global_player_one_elo_delta,
-                    player_two_elo: global_elo_calc.player_two.player_elo,
-                    player_two_elo_delta: global_player_two_elo_delta,
-                    ..set_struct
-                };
+                // Calculate elo for both players in the global table.
+                let (delta_one, delta_two) = global_elo.calc_elo();
+                let (_unused_one, _unused_two) = game_elo.calc_elo();
 
+                // Record the change in elo.
+                set_struct.player_one_elo_delta = delta_one;
+                set_struct.player_one_elo_delta = delta_two;
+
+                // Record the set. Update any changes in the player's stats
+                // in both the global and game table.
                 rusqlite_connection.insert_set(set_struct);
-                rusqlite_connection.update_player(global_elo_calc.player_one, &PLAYERS.to_string());
-                rusqlite_connection.update_player(game_elo_calc.player_one, &game_name);
-                rusqlite_connection.update_player(global_elo_calc.player_two, &PLAYERS.to_string());
-                rusqlite_connection.update_player(game_elo_calc.player_two, &game_name);
+                rusqlite_connection.update_player(
+                    global_elo.player_one,
+                    &PLAYERS.to_string()
+                );
+                rusqlite_connection.update_player(
+                    game_elo.player_one,
+                    &game_name
+                );
+                rusqlite_connection.update_player(
+                    global_elo.player_two,
+                    &PLAYERS.to_string()
+                );
+                rusqlite_connection.update_player(
+                    game_elo.player_two,
+                    &game_name
+                );
+
+                println!("P1: {}, P2: {}", player_one_name, player_two_name);
+                // If this is the last match, this is grand finals. Therefore
+                // whoever has the larger score won the tournament.
+                if i == (num_pages - 1) && count == set_list.len() {
+                    if set.player_one_score > set.player_two_score {
+                        rusqlite_connection.assign_winner(
+                            player_one_global_id,
+                            &PLAYERS.to_string()
+                        ).expect("Assigning P1 as winner to players failed");
+                        rusqlite_connection.assign_winner(
+                            player_one_global_id,
+                            &game_name
+                        ).expect("Assigning P1 as winner to game failed");
+                    } else {
+                        rusqlite_connection.assign_winner(
+                            player_two_global_id,
+                            &PLAYERS.to_string()
+                        ).expect("Assigning P2 as winner to players failed");
+                        rusqlite_connection.assign_winner(
+                            player_two_global_id,
+                            &game_name
+                        ).expect("Assigning P2 as winner to game failed");
+                    }
+                }
             }
+
+            count += 1;
         }
     }
 
     // Update the rankings and increment the relevant counters.
-    rusqlite_connection.update_ranking(&PLAYERS.to_string());
-    rusqlite_connection.update_ranking(&game_name);
-    rusqlite_connection.increment_count(&player_map, &PLAYERS.to_string());
-    rusqlite_connection.increment_count(&player_map, &game_name);
+    rusqlite_connection.update_ranking(&PLAYERS.to_string())
+        .expect("Updating rankings for players failed");
+    rusqlite_connection.update_ranking(&game_name)
+        .expect("Updating ranking for game failed");
+    rusqlite_connection.increment_count(&players, &PLAYERS.to_string())
+        .expect("Incrementing game count for players failed");
+    rusqlite_connection.increment_count(&players, &game_name)
+        .expect("Incrementing game count for game failed");
 
     Ok(())
 }

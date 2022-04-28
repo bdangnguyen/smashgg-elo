@@ -27,14 +27,14 @@ pub fn get_input<U: std::str::FromStr>(prompt: &str) -> U {
 
 
 /// Function to scrub strings and only take alphanumeric characters.
-pub fn scrub_string(string: &String) -> String {
-    let mut scrubbed_string = Vec::new();
+pub fn clean_string(string: &String) -> String {
+    let mut clean_string = Vec::new();
 
     for char in string.chars() {
         if char.is_alphanumeric() {
-            scrubbed_string.append(&mut char.to_lowercase().collect::<Vec<_>>());
+            clean_string.append(&mut char.to_lowercase().collect::<Vec<_>>());
         }
     }
 
-    return scrubbed_string.iter().collect::<String>();
+    return clean_string.iter().collect::<String>();
 }

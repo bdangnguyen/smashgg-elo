@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Error, params};
 use std::collections::HashMap;
-use smashgg_elo_rust::scrub_string;
+use smashgg_elo_rust::clean_string;
 
 // Wrapper struct representing a connection to a sqlite database.
 pub struct RusqliteConnection {
@@ -11,15 +11,15 @@ pub struct RusqliteConnection {
 // data and statistics of a player's performance in a tournament over time.
 pub struct PlayersRow {
     pub global_id: i32,
-    pub player_name: String,
-    pub player_rank: i32,
-    pub player_elo: f64,
-    pub player_num_games: i32,
-    pub player_wins: i32,
-    pub player_losses: i32,
-    pub player_win_loss_ratio: f64,
-    pub player_num_tournaments: i32,
-    pub player_tournament_wins: i32,
+    pub name: String,
+    pub rank: i32,
+    pub elo: f64,
+    pub num_games: i32,
+    pub wins: i32,
+    pub losses: i32,
+    pub win_loss_ratio: f64,
+    pub num_tournaments: i32,
+    pub tournament_wins: i32,
 }
 
 // Struct that represents a row in the sets table. This contains all of the
@@ -78,15 +78,15 @@ impl Default for RusqliteConnection {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS players (
                 global_id               INTEGER NOT NULL PRIMARY KEY UNIQUE,
-                player_name             TEXT NOT NULL,
-                player_rank             INTEGER DEFAULT 0 NOT NULL,
-                player_elo              REAL DEFAULT 1500.0 NOT NULL,
-                player_num_games        INTEGER DEFAULT 0 NOT NULL,
-                player_wins             INTEGER DEFAULT 0 NOT NULL,
-                player_losses           INTEGER DEFAULT 0 NOT NULL,
-                player_win_loss_ratio   REAL DEFAULT 0 NOT NULL,
-                player_num_tournaments  INTEGER DEFAULT 0 NOT NULL,
-                player_tournament_wins  INTEGER DEFAULT 0 NOT NULL
+                name             TEXT NOT NULL,
+                rank             INTEGER DEFAULT 0 NOT NULL,
+                elo              REAL DEFAULT 1500.0 NOT NULL,
+                num_games        INTEGER DEFAULT 0 NOT NULL,
+                wins             INTEGER DEFAULT 0 NOT NULL,
+                losses           INTEGER DEFAULT 0 NOT NULL,
+                win_loss_ratio   REAL DEFAULT 0 NOT NULL,
+                num_tournaments  INTEGER DEFAULT 0 NOT NULL,
+                tournament_wins  INTEGER DEFAULT 0 NOT NULL
             )",
             []
         ).expect("Creating player table failed");
@@ -123,57 +123,70 @@ impl RusqliteConnection {
         RusqliteConnection::default()
     }
 
+    /// Given a table name, create a table in the sqlite database if it doesn't
+    /// exist. This is primarily used to generate tables for different games.
     pub fn create_table(&self, table_name: &String) {
         // Initialize a game table if there is none.
         let table_beg = "CREATE TABLE IF NOT EXISTS ";
         let table_end = "(
-            global_id               INTEGER NOT NULL PRIMARY KEY UNIQUE,
-            player_name             TEXT NOT NULL,
-            player_rank             INTEGER DEFAULT 0 NOT NULL,
-            player_elo              REAL DEFAULT 1500.0 NOT NULL,
-            player_num_games        INTEGER DEFAULT 0 NOT NULL,
-            player_wins             INTEGER DEFAULT 0 NOT NULL,
-            player_losses           INTEGER DEFAULT 0 NOT NULL,
-            player_win_loss_ratio   REAL DEFAULT 0 NOT NULL,
-            player_num_tournaments  INTEGER DEFAULT 0 NOT NULL,
-            player_tournament_wins  INTEGER DEFAULT 0 NOT NULL
+            global_id        INTEGER NOT NULL PRIMARY KEY UNIQUE,
+            name             TEXT NOT NULL,
+            rank             INTEGER DEFAULT 0 NOT NULL,
+            elo              REAL DEFAULT 1500.0 NOT NULL,
+            num_games        INTEGER DEFAULT 0 NOT NULL,
+            wins             INTEGER DEFAULT 0 NOT NULL,
+            losses           INTEGER DEFAULT 0 NOT NULL,
+            win_loss_ratio   REAL DEFAULT 0 NOT NULL,
+            num_tournaments  INTEGER DEFAULT 0 NOT NULL,
+            tournament_wins  INTEGER DEFAULT 0 NOT NULL
         )";
-        let table_stmt = format!("{} {} {}", table_beg, scrub_string(table_name), table_end);
-        self.conn.execute(table_stmt.as_str(), []).expect("Creating a game table failed");
+        let table_stmt = format!("{} {} {}",
+            table_beg,
+            clean_string(table_name),
+            table_end);
+        self.conn.execute(table_stmt.as_str(), [])
+        .expect("Creating a game table failed");
     }
 
     // Given a global id, and the player name, the function searches the 
     // database for any existing record of the player participating in a
     // tournament. If no such record exists, it will create one.
-    pub fn select_player(&self, global_id: i32, player_name: &String, table_name: &String) -> Result<PlayersRow, Error> {
+    pub fn select_player(
+        &self,
+        global_id: i32,
+        name: &String,
+        table_name: &String
+    ) -> Result<PlayersRow, Error> {
         // If the player does not exist in the database, create a default
         // record for the player in the sqlite database.
-        let insert_beg = "INSERT OR IGNORE INTO";
-        let insert_end = "(global_id, player_name) VALUES (?1,?2)";
-        let insert_stmt = format!("{} {} {}", insert_beg, scrub_string(table_name), insert_end);
+        let insert_stmt = format!(
+            "INSERT OR IGNORE INTO {} (global_id, name) VALUES (?1, ?2)",
+            clean_string(table_name)
+        );
         self.conn.execute(insert_stmt.as_str(),
-            params![global_id, player_name]
+            params![global_id, name]
         )?;
         
-        let select_beg = "SELECT * FROM";
-        let select_end = "WHERE global_id = ?1";
-        let select_stmt = format!("{} {} {}", select_beg, scrub_string(table_name), select_end);
         // Find the row in the player table that matches to the id. Once found
         // create a PlayerRow object to use.
+        let select_stmt = format!(
+            "SELECT * FROM {} WHERE global_id = ?1",
+            clean_string(table_name)
+        );
         let mut stmt = self.conn.prepare(select_stmt.as_str())?;
         let player_iter = stmt.query_map(params![global_id], |row| 
             { Ok(
                 PlayersRow {
                     global_id,
-                    player_name: row.get(1)?,
-                    player_rank: row.get(2)?,
-                    player_elo: row.get(3)?,
-                    player_num_games: row.get(4)?,
-                    player_wins: row.get(5)?,
-                    player_losses: row.get(6)?,
-                    player_win_loss_ratio: row.get(7)?,
-                    player_num_tournaments: row.get(8)?,
-                    player_tournament_wins: row.get(9)?,
+                    name: row.get(1)?,
+                    rank: row.get(2)?,
+                    elo: row.get(3)?,
+                    num_games: row.get(4)?,
+                    wins: row.get(5)?,
+                    losses: row.get(6)?,
+                    win_loss_ratio: row.get(7)?,
+                    num_tournaments: row.get(8)?,
+                    tournament_wins: row.get(9)?,
                 })
             }
         )?;
@@ -184,23 +197,24 @@ impl RusqliteConnection {
     // Updates player information in the database after elo calculations have
     // been made.
     pub fn update_player(&self, player: PlayersRow, table_name: &String) {
-        let update_beg = "UPDATE";
-        let update_end = "SET 
-            player_elo = ?1,
-            player_num_games = ?2, 
-            player_wins = ?3,
-            player_losses = ?4,
-            player_win_loss_ratio = ?5
-        WHERE global_id = ?6";
-        let update_stmt = format!("{} {} {}", update_beg, scrub_string(table_name), update_end);
+        let update_stmt = format!(
+            "UPDATE {} SET
+                elo = ?1,
+                num_games = ?2, 
+                wins = ?3,
+                losses = ?4,
+                win_loss_ratio = ?5
+            WHERE global_id = ?6",
+            clean_string(table_name)
+        );
         self.conn.execute(
             update_stmt.as_str(),
             params![
-                player.player_elo,
-                player.player_num_games,
-                player.player_wins,
-                player.player_losses,
-                player.player_win_loss_ratio,
+                player.elo,
+                player.num_games,
+                player.wins,
+                player.losses,
+                player.win_loss_ratio,
                 player.global_id
             ]
         ).expect("Updating player info failed");
@@ -244,10 +258,16 @@ impl RusqliteConnection {
 
     // Simply selects all of the players who have at least one completed set
     // and updates the elo rankings in the database.
-    pub fn update_ranking(&self, table_name: &String) -> Result<(), rusqlite::Error> {
+    pub fn update_ranking(
+        &self,
+        table_name: &String
+    ) -> Result<(), rusqlite::Error> {
         // Select all players in the database and order by elo.
         let mut count = 1;
-        let rank_stmt = format!("SELECT global_id FROM {} ORDER BY player_elo DESC", scrub_string(table_name));
+        let rank_stmt = format!(
+            "SELECT global_id FROM {} ORDER BY elo DESC",
+            clean_string(table_name)
+        );
         let mut stmt = self.conn.prepare(&rank_stmt.to_string())?;
         let rank_iter = stmt.query_map([], |row| 
             Ok(
@@ -258,7 +278,10 @@ impl RusqliteConnection {
         )?;
 
         // Iterate through each player in the database and update rankings.
-        let ranking_stmt = format!("UPDATE {} SET player_rank = ?1 WHERE global_id =?2", scrub_string(table_name));
+        let ranking_stmt = format!(
+            "UPDATE {} SET rank = ?1 WHERE global_id =?2",
+            clean_string(table_name)
+        );
         for player_id in rank_iter {
             let mut stmt = self.conn.prepare(&ranking_stmt.to_string())?;
 
@@ -274,9 +297,18 @@ impl RusqliteConnection {
         Ok(())
     }
 
-    pub fn increment_count(&self, player_map: &HashMap<i32, (String, i32)>, table_name: &String)  -> Result<(), rusqlite::Error>{
+    pub fn increment_count(
+        &self,
+        player_map: &HashMap<i32, (String, i32)>,
+        table_name: &String
+    )  -> Result<(), rusqlite::Error>{
+        // For each player in the tournament, grab the number of tournaments
+        // that they participated in.
         for player in player_map.values() {
-            let incr_stmt = format!("SELECT player_num_tournaments FROM {} WHERE global_id = {}", scrub_string(table_name), player.1);
+            let incr_stmt = format!(
+                "SELECT num_tournaments FROM {} WHERE global_id = {}",
+                clean_string(table_name), player.1
+            );
             let mut stmt = self.conn.prepare(&incr_stmt.to_string())?;
             let mut incr_iter = stmt.query_map([], |row| 
                 Ok(
@@ -286,16 +318,67 @@ impl RusqliteConnection {
                 )
             )?.peekable();
 
+            // If the player exists in the sqlite database, increment the
+            // number of tournaments that they have.
             if incr_iter.peek().is_some() {
-                match incr_iter.last().expect("!") {
-                    Ok(incr_stat) => {
-                        let update_stmt = format!("UPDATE {} SET player_num_tournaments = ?1 WHERE global_id = ?2", scrub_string(table_name));
+                match incr_iter
+                    .last()
+                    .expect("Iterator error: No data for num_tournaments") {
+                    Ok(num_tour) => {
+                        let update_stmt = format!(
+                            "UPDATE {} SET num_tournaments = ?1 WHERE global_id = ?2",
+                            clean_string(table_name)
+                        );
                         stmt = self.conn.prepare(&update_stmt.to_string())?;
-                        stmt.execute(params![incr_stat.itr_int + 1, player.1])?;
+                        stmt.execute(params![num_tour.itr_int + 1, player.1])?;
                     }
-                    Err(err) => println!("Error updating number of tournaments: {}", err),
+                    Err(err) => {
+                        panic!("Error updating number of tournaments: {}", err)
+                    }
                 }
             }
+        }
+
+        Ok(())
+    }
+
+    /// Function that takes the global_id of the winner of the tournament and
+    /// the game that the tournament was hosted in and updates the sqlite
+    /// database to reflect the win.
+    pub fn assign_winner(
+        &self,
+        global_id: i32,
+        table_name: &String
+    ) -> Result<(), rusqlite::Error> {
+        // Select the number of wins that the tournament winner has
+        let win_stmt = format!(
+            "SELECT tournament_wins FROM {} WHERE global_id = {}",
+            clean_string(table_name),
+            global_id
+        );
+        let mut stmt = self.conn.prepare(&win_stmt.to_string())?;
+        let win_iter = stmt.query_map([], |row| 
+            Ok(
+                ItrStruct {
+                    itr_int: row.get(0)?
+                }
+            )
+        )?;
+
+        // Increment the number of wins that a tournament winner has
+        let winner_stmt = format!(
+            "UPDATE {} SET tournament_wins = ?1 WHERE global_id = ?2",
+            clean_string(table_name)
+        );
+        let mut stmt = self.conn.prepare(&winner_stmt.to_string())?;
+        match win_iter
+            .last()
+            .expect("Iterator error: No data found for tournament_wins")
+        {
+            Ok(winner_struct) => {
+                stmt.execute(params![winner_struct.itr_int + 1, global_id])?;
+            }
+            Err(err) => panic!("Matching error: {}", err),
         }
 
         Ok(())
