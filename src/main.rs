@@ -1,5 +1,5 @@
-use crate::reqwest_wrapper::{ReqwestClient, Content, ContentType};
-use crate::rusqlite_wrapper::{RusqliteConnection, PlayersRow};
+use crate::reqwest_wrapper::{Content, ContentType, ReqwestClient};
+use crate::rusqlite_wrapper::{PlayersRow, RusqliteConnection};
 use chrono::{TimeZone, Utc};
 
 mod elo;
@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         content.edit_content(ContentType::Info);
         reqwest_client.construct_json(&content);
         json = reqwest_client.send_post().json()?;
-        
+
         let mut set_unsorted_list = json.get_sets_info();
         set_list.append(&mut set_unsorted_list);
     }
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let player_two_name = &players[&set.player_two_id].0;
         let player_two_global_id = players[&set.player_two_id].1;
         let dt = Utc.timestamp(set.time, 0);
-        
+
         let mut set_struct = rusqlite_wrapper::SetsRow {
             player_one_global_id,
             player_one_name: player_one_name.to_string(),
@@ -87,36 +87,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let global_player_one = rusqlite_connection.select_player(
                 player_one_global_id,
                 player_one_name,
-                &PLAYERS.to_string()
+                &PLAYERS.to_string(),
             )?;
             let global_player_two = rusqlite_connection.select_player(
                 player_two_global_id,
                 player_two_name,
-                &PLAYERS.to_string()
+                &PLAYERS.to_string(),
             )?;
             let game_player_one = rusqlite_connection.select_player(
                 player_one_global_id,
                 player_one_name,
-                &game_name
+                &game_name,
             )?;
             let game_player_two = rusqlite_connection.select_player(
                 player_two_global_id,
                 player_two_name,
-                &game_name
+                &game_name,
             )?;
-
 
             let mut global_elo = elo::Elo {
                 player_one: global_player_one,
                 score_one: set.player_one_score,
                 player_two: global_player_two,
-                score_two: set.player_two_score
+                score_two: set.player_two_score,
             };
             let mut game_elo = elo::Elo {
                 player_one: game_player_one,
                 score_one: set.player_one_score,
                 player_two: game_player_two,
-                score_two: set.player_two_score
+                score_two: set.player_two_score,
             };
 
             // Record the elo before the change
@@ -162,37 +161,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // whoever has the larger score won the tournament.
             if count == set_list.len() {
                 if set.player_one_score > set.player_two_score {
-                    rusqlite_connection.assign_winner(
-                        player_one_global_id,
-                        &PLAYERS.to_string()
-                    ).expect("Assigning P1 as winner to players failed");
-                    rusqlite_connection.assign_winner(
-                        player_one_global_id,
-                        &game_name
-                    ).expect("Assigning P1 as winner to game failed");
+                    rusqlite_connection
+                        .assign_winner(player_one_global_id,
+                            &PLAYERS.to_string())
+                        .expect("Assigning P1 as winner to players failed");
+                    rusqlite_connection
+                        .assign_winner(player_one_global_id,
+                            &game_name)
+                        .expect("Assigning P1 as winner to game failed");
                 } else {
-                    rusqlite_connection.assign_winner(
-                        player_two_global_id,
-                        &PLAYERS.to_string()
-                    ).expect("Assigning P2 as winner to players failed");
-                    rusqlite_connection.assign_winner(
-                        player_two_global_id,
-                        &game_name
-                    ).expect("Assigning P2 as winner to game failed");
+                    rusqlite_connection
+                        .assign_winner(player_two_global_id,
+                            &PLAYERS.to_string())
+                        .expect("Assigning P2 as winner to players failed");
+                    rusqlite_connection
+                        .assign_winner(player_two_global_id,
+                            &game_name)
+                        .expect("Assigning P2 as winner to game failed");
                 }
             }
         }
     }
 
     // Update the rankings and increment the relevant counters.
-    rusqlite_connection.update_ranking(&PLAYERS.to_string())
+    rusqlite_connection
+        .update_ranking(&PLAYERS.to_string())
         .expect("Updating rankings for players failed");
-    rusqlite_connection.update_ranking(&game_name)
+    rusqlite_connection
+        .update_ranking(&game_name)
         .expect("Updating ranking for game failed");
-    rusqlite_connection.increment_count(&players, &PLAYERS.to_string())
+    rusqlite_connection
+        .increment_count(&players, &PLAYERS.to_string())
         .expect("Incrementing game count for players failed");
-    rusqlite_connection.increment_count(&players, &game_name)
+    rusqlite_connection
+        .increment_count(&players, &game_name)
         .expect("Incrementing game count for game failed");
 
+    println!("Finished processing!");
     Ok(())
 }

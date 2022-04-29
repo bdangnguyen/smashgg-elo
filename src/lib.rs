@@ -25,7 +25,6 @@ pub fn get_input<U: std::str::FromStr>(prompt: &str) -> U {
     }
 }
 
-
 /// Function to scrub strings and only take alphanumeric characters.
 pub fn clean_string(string: &str) -> String {
     let mut clean_string = Vec::new();

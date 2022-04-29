@@ -1,9 +1,9 @@
 use reqwest::blocking::{Client, Response};
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::HashMap;
 use smashgg_elo_rust::get_input;
+use std::collections::HashMap;
 
 const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";
 const AUTH_PROMPT: &str = "See info about authentication here: https://developer.smash.gg/docs/authentication\nEnter your smash.gg authentication token: ";
@@ -46,9 +46,9 @@ impl Default for ReqwestClient<'_> {
 
         ReqwestClient {
             client: reqwest::blocking::Client::builder()
-            .default_headers(headers)
-            .build()
-            .expect("Error in creating the reqwest client"),
+                .default_headers(headers)
+                .build()
+                .expect("Error in creating the reqwest client"),
             json_content: HashMap::new(),
         }
     }
@@ -59,46 +59,41 @@ impl ReqwestClient<'_> {
         ReqwestClient::default()
     }
 
-    // Sends a HTTP post request using the header and json fields in the 
+    // Sends a HTTP post request using the header and json fields in the
     // struct and returns a reqwest response. This reqwest will later be
     // parsed into json by other methods.
     pub fn send_post(&self) -> Response {
-        self
-        .client
-        .post(SMASH_URL)
-        .json(&self.json_content)
-        .send()
-        .expect("Error in sending post request")
+        self.client
+            .post(SMASH_URL)
+            .json(&self.json_content)
+            .send()
+            .expect("Error in sending post request")
     }
 
     // Changes the json content in the HTTP post request. Only changes the
     // values for query and the values for variables.
-    pub fn construct_json(&mut self, content: &Content)  {
-        self.json_content.insert(
-            "query",
-            Value::from(content.query)
-        );
-        self.json_content.insert(
-            "variables",
-            serde_json::json!(content.variables)
-        );
+    pub fn construct_json(&mut self, content: &Content) {
+        self.json_content
+            .insert("query", Value::from(content.query));
+        self.json_content
+            .insert("variables", serde_json::json!(content.variables));
     }
 }
 
 // Struct that contains all of the necessary information needed to get the
 // right data back from smash.gg's api. This includes the graphql query and
 // the relevant variables that will be converted into json to send.
-#[derive(Serialize)] 
+#[derive(Serialize)]
 pub struct Content {
     pub query: &'static str,
-    pub variables: Variables
+    pub variables: Variables,
 }
 
 impl Default for Content {
     fn default() -> Self {
         Content {
             query: "",
-            variables: Variables::new()
+            variables: Variables::new(),
         }
     }
 }
@@ -114,37 +109,36 @@ impl Content {
         (self.query, self.variables.per_page) = match enum_type {
             ContentType::Init => {
                 self.variables.tournament_slug = Some(get_input(SLUG_PROMPT));
-                (include_str!("query/tourney_event_query.graphql"),
-                None)
+                (include_str!("query/tourney_event_query.graphql"), None)
             }
-            ContentType::Event => {
-                (include_str!("query/entrant_page_query.graphql"),
-                Some(MAX_ENTRANTS))
-            }
-            ContentType::Set => {
-                (include_str!("query/sets_page_query.graphql"),
-                Some(MAX_SETS))
-            }
-            ContentType::Info => {
-                (include_str!("query/sets_info_query.graphql"),
-                Some(MAX_SETS))
-            }
-            ContentType::Page => {
-                (include_str!("query/entrant_info_query.graphql"),
-                Some(MAX_ENTRANTS))
-            }
+            ContentType::Event => (
+                include_str!("query/entrant_page_query.graphql"),
+                Some(MAX_ENTRANTS),
+            ),
+            ContentType::Set => (
+                include_str!("query/sets_page_query.graphql"),
+                Some(MAX_SETS),
+            ),
+            ContentType::Info => (
+                include_str!("query/sets_info_query.graphql"),
+                Some(MAX_SETS),
+            ),
+            ContentType::Page => (
+                include_str!("query/entrant_info_query.graphql"),
+                Some(MAX_ENTRANTS),
+            ),
         };
     }
 }
 
 // Struct that contains the variables that we send with our HTTP post request.
 // Not all variables need to be present with each request.
-#[derive(Default, Serialize)] 
+#[derive(Default, Serialize)]
 pub struct Variables {
     pub tournament_slug: Option<String>,
     pub event_id: Option<i32>,
     pub page: Option<i32>,
-    pub per_page: Option<i32>
+    pub per_page: Option<i32>,
 }
 
 impl Variables {

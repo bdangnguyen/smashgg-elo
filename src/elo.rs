@@ -8,15 +8,15 @@ pub struct Elo {
     pub player_one: PlayersRow,
     pub score_one: i32,
     pub player_two: PlayersRow,
-    pub score_two: i32
+    pub score_two: i32,
 }
 
 impl Elo {
     /// Calculates the expected score used for the Elo algorithm. The formula
     /// for a player's expected score is given as
-    /// 
+    ///
     /// E_{p_1} = Q_{p_1} / (Q_{p_1} + Q_{p_2})
-    /// 
+    ///
     /// Where Q_{p_1} = 10^(Elo_{p_1} / 400), Q_{p_2} = 10^(Elo_{p_2} / 400)
     fn expected_scores(&self, num_games: i32) -> (f64, f64) {
         let (mut ex_score_one, mut ex_score_two) = (0.0, 0.0);
@@ -39,11 +39,11 @@ impl Elo {
         // under 20 total games for any game, they are assigned provisional.
         let k_factor_one = match self.player_one.num_games {
             i if i < K_FACTOR_LIMIT => K_FACTOR_PROVISIONAL,
-            _ => K_FACTOR_STANDARD
+            _ => K_FACTOR_STANDARD,
         };
         let k_factor_two = match self.player_two.num_games {
             i if i < K_FACTOR_LIMIT => K_FACTOR_PROVISIONAL,
-            _ => K_FACTOR_STANDARD
+            _ => K_FACTOR_STANDARD,
         };
 
         // Calculate the change in elo for both players. The formula for a
@@ -59,13 +59,15 @@ impl Elo {
         self.player_one.num_games += self.score_one + self.score_two;
         self.player_one.wins += self.score_one;
         self.player_one.losses += self.score_two;
-        self.player_one.win_loss_ratio = self.player_one.wins as f64 / self.player_one.num_games as f64;
+        self.player_one.win_loss_ratio =
+            self.player_one.wins as f64 / self.player_one.num_games as f64;
 
         self.player_two.elo += delta_two;
         self.player_two.num_games += self.score_one + self.score_two;
         self.player_two.wins += self.score_two;
         self.player_two.losses += self.score_one;
-        self.player_two.win_loss_ratio = self.player_two.wins as f64 / self.player_two.num_games as f64;
+        self.player_two.win_loss_ratio =
+            self.player_two.wins as f64 / self.player_two.num_games as f64;
 
         (delta_one, delta_two)
     }

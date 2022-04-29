@@ -1,15 +1,15 @@
 use crate::reqwest_wrapper::{Content, ContentType, ReqwestClient};
-use std::collections::HashMap;
 use serde::Deserialize;
 use smashgg_elo_rust::get_input;
+use std::collections::HashMap;
 
 const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
 
 /// Generic entry point for all post requests. The top level struct acts as
 /// the object that the rest of the program interfaces with to get the data.
-#[derive(Deserialize, Debug)] 
-pub struct PostResponse { 
-    data: Data
+#[derive(Deserialize, Debug)]
+pub struct PostResponse {
+    data: Data,
 }
 
 impl PostResponse {
@@ -19,11 +19,10 @@ impl PostResponse {
     pub fn get_event_info(self) -> (i32, String, String) {
         let tournament = self.data.tournament();
         let num_evnts: i32 = (tournament.events.len() - 1).try_into().unwrap();
-        
+
         // Print all events to the console with the associated game and event
         // name. Loop continuously until the user selects one to parse.
         loop {
-
             println!("List of events found in the tournament:");
             for (count, event) in tournament.events.iter().enumerate() {
                 println!("{}: {:?} - {:?}", count, event.videogame.name, event.name);
@@ -33,12 +32,12 @@ impl PostResponse {
             match event_input {
                 i if i < 0 => continue,
                 i if i > num_evnts => continue,
-                _ =>  {
+                _ => {
                     let info = &tournament.events[event_input as usize];
                     return (
                         info.id,
                         info.videogame.name.to_owned(),
-                        info.name.to_owned()
+                        info.name.to_owned(),
                     );
                 }
             };
@@ -60,15 +59,13 @@ impl PostResponse {
             let player_one = &node.slots()[0];
             let player_two = &node.slots()[1];
 
-            set_vec.push(
-                SetInfo {
-                    player_one_id: player_one.entrant().id(),
-                    player_one_score: player_one.standing().stats.score.value(),
-                    player_two_id: player_two.entrant().id(),
-                    player_two_score: player_two.standing().stats.score.value(),
-                    time: node.completed_at()
-                }
-            );
+            set_vec.push(SetInfo {
+                player_one_id: player_one.entrant().id(),
+                player_one_score: player_one.standing().stats.score.value(),
+                player_two_id: player_two.entrant().id(),
+                player_two_score: player_two.standing().stats.score.value(),
+                time: node.completed_at(),
+            });
         }
         set_vec.reverse();
         set_vec
@@ -80,7 +77,7 @@ impl PostResponse {
     pub fn construct_players(
         self,
         reqwest_client: &mut ReqwestClient,
-        event_id: i32
+        event_id: i32,
     ) -> HashMap<i32, (String, i32)> {
         // Detect how many calls to the api that we need to make to record
         // all players in an event.
@@ -91,7 +88,7 @@ impl PostResponse {
         // Call multiple times and record each player that participated.
         println!("Found {} pages of player data", page_info.total_pages);
         for i in 1..page_info.total_pages + 1 {
-            println!("Processing page {} out of {}...",i, page_info.total_pages);
+            println!("Processing page {} out of {}...", i, page_info.total_pages);
             let mut content = Content::new();
             content.variables.event_id = Some(event_id);
             content.variables.page = Some(i);
@@ -107,21 +104,22 @@ impl PostResponse {
 
             for player in nodes {
                 player_map.insert(
-                 player.id(),
-                 (player.participants()[0].gamer_tag.to_owned(),
-                    player.participants()[0].user.id()),
+                    player.id(),
+                    (
+                        player.participants()[0].gamer_tag.to_owned(),
+                        player.participants()[0].user.id(),
+                    ),
                 );
             }
         }
 
         player_map
     }
-
 }
-#[derive(Deserialize, Debug)] 
-struct Data { 
+#[derive(Deserialize, Debug)]
+struct Data {
     tournament: Option<Tournament>,
-    event: Option<Event>
+    event: Option<Event>,
 }
 
 impl Data {
@@ -129,31 +127,31 @@ impl Data {
         self.tournament.as_ref().expect("Matching error: No tournament found")
 
     }
-    
+
     fn event(self) -> Event {
         self.event.expect("Matching error: No event found")
     }
 }
 
-#[derive(Deserialize, Debug)] 
-struct Tournament { 
-    events: Vec<Events>, 
+#[derive(Deserialize, Debug)]
+struct Tournament {
+    events: Vec<Events>,
 }
 
-#[derive(Deserialize, Debug)] 
+#[derive(Deserialize, Debug)]
 struct Events {
     id: i32,
     name: String,
-    videogame: Videogame
+    videogame: Videogame,
 }
 #[derive(Deserialize, Debug)]
 struct Videogame {
-    name: String
+    name: String,
 }
-#[derive(Deserialize, Debug)] 
+#[derive(Deserialize, Debug)]
 struct Event {
     entrants: Option<Entrants>,
-    sets: Option<Sets>
+    sets: Option<Sets>,
 }
 
 impl Event {
@@ -168,9 +166,9 @@ impl Event {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
- struct Entrants {
+struct Entrants {
     page_info: Option<PageInfo>,
-    nodes: Option<Vec<Nodes>>
+    nodes: Option<Vec<Nodes>>,
 }
 
 impl Entrants {
@@ -183,12 +181,11 @@ impl Entrants {
     }
 }
 
-
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Sets {
     page_info: Option<PageInfo>,
-    nodes: Option<Vec<Nodes>>
+    nodes: Option<Vec<Nodes>>,
 }
 
 impl Sets {
@@ -203,12 +200,12 @@ impl Sets {
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
- struct PageInfo {
-    total_pages: i32
+struct PageInfo {
+    total_pages: i32,
 }
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
- struct Nodes {
+struct Nodes {
     id: Option<i32>,
     participants: Option<Vec<Participants>>,
     completed_at: Option<i64>,
@@ -221,7 +218,9 @@ impl Nodes {
     }
 
     fn participants(&self) -> &Vec<Participants> {
-        self.participants.as_ref().expect("Matching error: No participants found")
+        self.participants
+            .as_ref()
+            .expect("Matching error: No participants found")
     }
 
     fn completed_at(&self) -> i64 {
@@ -237,11 +236,11 @@ impl Nodes {
 #[serde(rename_all = "camelCase")]
 struct Participants {
     gamer_tag: String,
-    user: User
+    user: User,
 }
 #[derive(Deserialize, Debug)]
 struct User {
-    id: Option<i32>
+    id: Option<i32>,
 }
 
 impl User {
@@ -253,7 +252,7 @@ impl User {
 #[derive(Deserialize, Debug)]
 struct Slots {
     entrant: Option<Entrant>,
-    standing: Option<Standing>
+    standing: Option<Standing>,
 }
 
 impl Slots {
@@ -267,7 +266,7 @@ impl Slots {
 }
 #[derive(Deserialize, Debug)]
 struct Entrant {
-    id: Option<i32>
+    id: Option<i32>,
 }
 
 impl Entrant {
@@ -278,15 +277,15 @@ impl Entrant {
 
 #[derive(Deserialize, Debug)]
 struct Standing {
-    stats: Stats
+    stats: Stats,
 }
 #[derive(Deserialize, Debug)]
 struct Stats {
-    score: Score
+    score: Score,
 }
 #[derive(Deserialize, Debug)]
 struct Score {
-    value: Option<i32>
+    value: Option<i32>,
 }
 
 // This handles the edge case where we request data and find out that there
@@ -306,5 +305,5 @@ pub struct SetInfo {
     pub player_one_score: i32,
     pub player_two_id: i32,
     pub player_two_score: i32,
-    pub time: i64
+    pub time: i64,
 }
