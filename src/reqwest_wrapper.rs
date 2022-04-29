@@ -12,11 +12,11 @@ const MAX_ENTRANTS: i32 = 499;
 const MAX_SETS: i32 = 70;
 
 pub enum ContentType {
-    InitContent,
-    EventContent,
-    SetContent,
-    InfoContent,
-    PageContent,
+    Init,
+    Event,
+    Set,
+    Info,
+    Page,
 }
 
 // A wrapper struct around a reqwest blocking Client. It contains the headers
@@ -112,24 +112,24 @@ impl Content {
     // request.
     pub fn edit_content(&mut self, enum_type: ContentType) {
         (self.query, self.variables.per_page) = match enum_type {
-            ContentType::InitContent => {
+            ContentType::Init => {
                 self.variables.tournament_slug = Some(get_input(SLUG_PROMPT));
                 (include_str!("query/tourney_event_query.graphql"),
                 None)
             }
-            ContentType::EventContent => {
+            ContentType::Event => {
                 (include_str!("query/entrant_page_query.graphql"),
                 Some(MAX_ENTRANTS))
             }
-            ContentType::SetContent => {
+            ContentType::Set => {
                 (include_str!("query/sets_page_query.graphql"),
                 Some(MAX_SETS))
             }
-            ContentType::InfoContent => {
+            ContentType::Info => {
                 (include_str!("query/sets_info_query.graphql"),
                 Some(MAX_SETS))
             }
-            ContentType::PageContent => {
+            ContentType::Page => {
                 (include_str!("query/entrant_info_query.graphql"),
                 Some(MAX_ENTRANTS))
             }
@@ -139,23 +139,12 @@ impl Content {
 
 // Struct that contains the variables that we send with our HTTP post request.
 // Not all variables need to be present with each request.
-#[derive(Serialize)] 
+#[derive(Default, Serialize)] 
 pub struct Variables {
     pub tournament_slug: Option<String>,
     pub event_id: Option<i32>,
     pub page: Option<i32>,
     pub per_page: Option<i32>
-}
-
-impl Default for Variables {
-    fn default() -> Self {
-        Variables {
-            tournament_slug: None,
-            event_id: None,
-            page: None,
-            per_page: None
-        }
-    }
 }
 
 impl Variables {

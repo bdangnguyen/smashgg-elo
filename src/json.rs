@@ -23,18 +23,16 @@ impl PostResponse {
         // Print all events to the console with the associated game and event
         // name. Loop continuously until the user selects one to parse.
         loop {
-            let mut count = 0;
 
             println!("List of events found in the tournament:");
-            for event in &tournament.events {
+            for (count, event) in tournament.events.iter().enumerate() {
                 println!("{}: {:?} - {:?}", count, event.videogame.name, event.name);
-                count += 1;
             }
 
             let event_input: i32 = get_input(EVNT_PROMPT);
             match event_input {
                 i if i < 0 => continue,
-                i if i > (num_evnts).try_into().unwrap() => continue,
+                i if i > num_evnts => continue,
                 _ =>  {
                     let info = &tournament.events[event_input as usize];
                     return (
@@ -73,8 +71,7 @@ impl PostResponse {
             );
         }
         set_vec.reverse();
-
-        return set_vec;
+        set_vec
     }
 
     /// Repeatedly queries smash.gg's api and collects all of the players
@@ -91,11 +88,11 @@ impl PostResponse {
         let page_info = self.data.event().entrants().page_info();
 
         // Call multiple times and record each player that participated.
-        for i in 0.. page_info.total_pages {
+        for i in 1..page_info.total_pages + 1 {
             let mut content = Content::new();
             content.variables.event_id = Some(event_id);
             content.variables.page = Some(i);
-            content.edit_content(ContentType::PageContent);
+            content.edit_content(ContentType::Page);
             reqwest_client.construct_json(&content);
 
             let json: PostResponse = match reqwest_client.send_post().json() {
@@ -109,13 +106,12 @@ impl PostResponse {
                 player_map.insert(
                  player.id(),
                  (player.participants()[0].gamer_tag.to_owned(),
-                    player.participants()[0].user.id
-                ),
+                    player.participants()[0].user.id),
                 );
             }
         }
 
-        return player_map;
+        player_map
     }
 
 }

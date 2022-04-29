@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rusqlite_connection = RusqliteConnection::new();
 
     // Grab the id and name of the event we want to parse.
-    content.edit_content(ContentType::InitContent);
+    content.edit_content(ContentType::Init);
     reqwest_client.construct_json(&content);
     let mut json: json::PostResponse = reqwest_client.send_post().json()?;
     let (event_id, game_name, event_name) = json.get_event_info();
@@ -26,13 +26,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a mapping of players that participated in that event.
     // The map is of the form key: tournament id, value: (name, global id).
     content.variables.event_id = Some(event_id);
-    content.edit_content(ContentType::EventContent);
+    content.edit_content(ContentType::Event);
     reqwest_client.construct_json(&content);
     json = reqwest_client.send_post().json()?;
     let players = json.construct_players(&mut reqwest_client, event_id);
 
     // Grab the amount of times we need to make a request to parse all sets.
-    content.edit_content(ContentType::SetContent);
+    content.edit_content(ContentType::Set);
     reqwest_client.construct_json(&content);
     json = reqwest_client.send_post().json()?;
     let num_pages = json.get_total_pages();
@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Grab the paginated json for sets.
         content.variables.event_id = Some(event_id);
         content.variables.page = Some(i);
-        content.edit_content(ContentType::InfoContent);
+        content.edit_content(ContentType::Info);
         reqwest_client.construct_json(&content);
         json = reqwest_client.send_post().json()?;
         let set_list = json.get_sets_info();
@@ -52,6 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // p1 tourney id, p1 score, p2 tourney id, p2 score, time
         for set in &set_list {
+            println!("Key1: {}, Key2: {}", set.player_one_id, set.player_two_id);
             let player_one_name = &players[&set.player_one_id].0;
             let player_one_global_id = players[&set.player_one_id].1;
             let player_two_name = &players[&set.player_two_id].0;
@@ -80,22 +81,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // game table in the sqlite database.
                 let global_player_one = rusqlite_connection.select_player(
                     player_one_global_id,
-                    &player_one_name,
+                    player_one_name,
                     &PLAYERS.to_string()
                 )?;
                 let global_player_two = rusqlite_connection.select_player(
                     player_two_global_id,
-                    &player_two_name,
+                    player_two_name,
                     &PLAYERS.to_string()
                 )?;
                 let game_player_one = rusqlite_connection.select_player(
                     player_one_global_id,
-                    &player_one_name,
+                    player_one_name,
                     &game_name
                 )?;
                 let game_player_two = rusqlite_connection.select_player(
                     player_two_global_id,
-                    &player_two_name,
+                    player_two_name,
                     &game_name
                 )?;
 
@@ -154,9 +155,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 // If this is the last match, this is grand finals. Therefore
                 // whoever has the larger score won the tournament.
-                println!("i: {}, num_pages: {}, count: {}, set: {}", i, num_pages, count, set_list.len());
                 if i == (num_pages - 1) && count == set_list.len() {
-                    println!("Enter");
                     if set.player_one_score > set.player_two_score {
                         rusqlite_connection.assign_winner(
                             player_one_global_id,

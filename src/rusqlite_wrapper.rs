@@ -269,7 +269,7 @@ impl RusqliteConnection {
             "SELECT global_id FROM {} ORDER BY elo DESC",
             clean_string(table_name)
         );
-        let mut stmt = self.conn.prepare(&rank_stmt.to_string())?;
+        let mut stmt = self.conn.prepare(&rank_stmt)?;
         let rank_iter = stmt.query_map([], |row| 
             Ok(
                 ItrStruct {
@@ -357,7 +357,7 @@ impl RusqliteConnection {
             clean_string(table_name),
             global_id
         );
-        let mut stmt = self.conn.prepare(&win_stmt.to_string())?;
+        let mut stmt = self.conn.prepare(&win_stmt)?;
         let win_iter = stmt.query_map([], |row| 
             Ok(
                 ItrStruct {
@@ -371,7 +371,7 @@ impl RusqliteConnection {
             "UPDATE {} SET tournament_wins = ?1 WHERE global_id = ?2",
             clean_string(table_name)
         );
-        let mut stmt = self.conn.prepare(&winner_stmt.to_string())?;
+        let mut stmt = self.conn.prepare(&winner_stmt)?;
         match win_iter
             .last()
             .expect("Iterator error: No data found for tournament_wins")

@@ -28,7 +28,7 @@ impl Elo {
             ex_score_two += quotient_two / (quotient_one + quotient_two);
         }
 
-        return (ex_score_one, ex_score_two);
+        (ex_score_one, ex_score_two)
     }
 
     /// Calculates the actual elo changes given two players and their respective
@@ -67,6 +67,6 @@ impl Elo {
         self.player_two.losses += self.score_one;
         self.player_two.win_loss_ratio = self.player_two.wins as f64 / self.player_two.num_games as f64;
 
-        return (delta_one, delta_two);
+        (delta_one, delta_two)
     }
 }
