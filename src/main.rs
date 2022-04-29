@@ -40,7 +40,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a table for the game rankings if needed.
     rusqlite_connection.create_table(&game_name);
 
-    for i in 0..num_pages {
+    println!("Requesting {} pages of set data...", num_pages);
+    for i in 1..(num_pages + 1) {
+        println!("Processing page {} out of {}...", i, num_pages);
         // Grab the paginated json for sets.
         content.variables.event_id = Some(event_id);
         content.variables.page = Some(i);
@@ -52,7 +54,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // p1 tourney id, p1 score, p2 tourney id, p2 score, time
         for set in &set_list {
-            println!("Key1: {}, Key2: {}", set.player_one_id, set.player_two_id);
             let player_one_name = &players[&set.player_one_id].0;
             let player_one_global_id = players[&set.player_one_id].1;
             let player_two_name = &players[&set.player_two_id].0;
@@ -155,7 +156,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 // If this is the last match, this is grand finals. Therefore
                 // whoever has the larger score won the tournament.
-                if i == (num_pages - 1) && count == set_list.len() {
+                if i == num_pages && count == set_list.len() {
                     if set.player_one_score > set.player_two_score {
                         rusqlite_connection.assign_winner(
                             player_one_global_id,

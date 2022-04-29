@@ -112,6 +112,7 @@ impl Default for RusqliteConnection {
             )",
             []
         ).expect("Creating sets table failed");
+        println!("Connected to database at database/smashgg.db3");
 
         RusqliteConnection { 
             conn

@@ -62,10 +62,10 @@ impl PostResponse {
 
             set_vec.push(
                 SetInfo {
-                    player_one_id: player_one.entrant().id,
-                    player_one_score: player_one.standing().stats.score.value,
-                    player_two_id: player_two.entrant().id,
-                    player_two_score: player_two.standing().stats.score.value,
+                    player_one_id: player_one.entrant().id(),
+                    player_one_score: player_one.standing().stats.score.value(),
+                    player_two_id: player_two.entrant().id(),
+                    player_two_score: player_two.standing().stats.score.value(),
                     time: node.completed_at()
                 }
             );
@@ -86,9 +86,12 @@ impl PostResponse {
         // all players in an event.
         let mut player_map = HashMap::new();
         let page_info = self.data.event().entrants().page_info();
+        println!("Constructing the list of players...");
 
         // Call multiple times and record each player that participated.
+        println!("Found {} pages of player data", page_info.total_pages);
         for i in 1..page_info.total_pages + 1 {
+            println!("Processing page {} out of {}...",i, page_info.total_pages);
             let mut content = Content::new();
             content.variables.event_id = Some(event_id);
             content.variables.page = Some(i);
@@ -106,7 +109,7 @@ impl PostResponse {
                 player_map.insert(
                  player.id(),
                  (player.participants()[0].gamer_tag.to_owned(),
-                    player.participants()[0].user.id),
+                    player.participants()[0].user.id()),
                 );
             }
         }
@@ -238,7 +241,13 @@ struct Participants {
 }
 #[derive(Deserialize, Debug)]
 struct User {
-    id: i32
+    id: Option<i32>
+}
+
+impl User {
+    fn id(&self) -> i32 {
+        self.id.expect("Matching error in user: No id found")
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -258,8 +267,15 @@ impl Slots {
 }
 #[derive(Deserialize, Debug)]
 struct Entrant {
-    id: i32
+    id: Option<i32>
 }
+
+impl Entrant {
+    fn id(&self) -> i32 {
+        self.id.expect("Matching error in entrant: No id found")
+    }
+}
+
 #[derive(Deserialize, Debug)]
 struct Standing {
     stats: Stats
@@ -270,7 +286,18 @@ struct Stats {
 }
 #[derive(Deserialize, Debug)]
 struct Score {
-    value: i32
+    value: Option<i32>
+}
+
+// This handles the edge case where we request data and find out that there
+// is none for a set. We thus then treat it as iff they have been DQ'd.
+impl Score {
+    fn value(&self) -> i32 {
+        match self.value {
+            Some(value) => value,
+            None => -1,
+        }
+    }
 }
 
 /// Internal struct used to contain information about the results of a set.
