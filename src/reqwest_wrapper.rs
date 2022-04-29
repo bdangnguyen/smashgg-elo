@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use smashgg_elo_rust::get_input;
 
 const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";
-const AUTH_PROMPT: &str = "Enter your smash.gg authentication token: ";
-const SLUG_PROMPT: &str = "Enter the tournament slug to read data from: ";
+const AUTH_PROMPT: &str = "See info about authentication here: https://developer.smash.gg/docs/authentication\nEnter your smash.gg authentication token: ";
+const SLUG_PROMPT: &str = "A tournament slug is of the form: https://smash.gg/tournament/[tournament slug]/...\nEnter the tournament slug to read data from: ";
 const MAX_ENTRANTS: i32 = 499;
 const MAX_SETS: i32 = 70;
 
