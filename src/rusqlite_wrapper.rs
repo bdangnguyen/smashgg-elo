@@ -9,6 +9,7 @@ pub struct RusqliteConnection {
 
 // Struct that represents a row in the players table. This contains all of the
 // data and statistics of a player's performance in a tournament over time.
+#[derive(Debug)]
 pub struct PlayersRow {
     pub global_id: i32,
     pub name: String,
@@ -196,7 +197,7 @@ impl RusqliteConnection {
 
     // Updates player information in the database after elo calculations have
     // been made.
-    pub fn update_player(&self, player: PlayersRow, table_name: &String) {
+    pub fn update_player(&self, player: &PlayersRow, table_name: &String) {
         let update_stmt = format!(
             "UPDATE {} SET
                 elo = ?1,

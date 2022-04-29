@@ -123,32 +123,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Record the change in elo.
                 set_struct.player_one_elo_delta = delta_one;
-                set_struct.player_one_elo_delta = delta_two;
+                set_struct.player_two_elo_delta = delta_two;
 
                 // Record the set. Update any changes in the player's stats
                 // in both the global and game table.
                 rusqlite_connection.insert_set(set_struct);
                 rusqlite_connection.update_player(
-                    global_elo.player_one,
+                    &global_elo.player_one,
                     &PLAYERS.to_string()
                 );
                 rusqlite_connection.update_player(
-                    game_elo.player_one,
+                    &game_elo.player_one,
                     &game_name
                 );
                 rusqlite_connection.update_player(
-                    global_elo.player_two,
+                    &global_elo.player_two,
                     &PLAYERS.to_string()
                 );
                 rusqlite_connection.update_player(
-                    game_elo.player_two,
+                    &game_elo.player_two,
                     &game_name
                 );
 
-                println!("P1: {}, P2: {}", player_one_name, player_two_name);
+                println!(
+                    "P1: {} - Elo: {:?}, P2: {} - Elo: {:?}",
+                    player_one_name,
+                    game_elo.player_one.elo,
+                    player_two_name,
+                    game_elo.player_two.elo
+                );
                 // If this is the last match, this is grand finals. Therefore
                 // whoever has the larger score won the tournament.
+                println!("i: {}, num_pages: {}, count: {}, set: {}", i, num_pages, count, set_list.len());
                 if i == (num_pages - 1) && count == set_list.len() {
+                    println!("Enter");
                     if set.player_one_score > set.player_two_score {
                         rusqlite_connection.assign_winner(
                             player_one_global_id,
