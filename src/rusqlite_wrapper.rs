@@ -1,5 +1,5 @@
 use rusqlite::{params, Connection, Error};
-use smashgg_elo_rust::clean_string;
+use smashgg_elo::clean_string;
 use std::collections::HashMap;
 
 // Wrapper struct representing a connection to a sqlite database.

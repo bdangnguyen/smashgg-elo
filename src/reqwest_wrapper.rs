@@ -2,7 +2,7 @@ use reqwest::blocking::{Client, Response};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::Serialize;
 use serde_json::Value;
-use smashgg_elo_rust::get_input;
+use smashgg_elo::get_input;
 use std::collections::HashMap;
 
 const SMASH_URL: &str = "https://api.smash.gg/gql/alpha";

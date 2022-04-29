@@ -1,6 +1,6 @@
 use crate::reqwest_wrapper::{Content, ContentType, ReqwestClient};
 use serde::Deserialize;
-use smashgg_elo_rust::get_input;
+use smashgg_elo::get_input;
 use std::collections::HashMap;
 
 const EVNT_PROMPT: &str = "Enter the id of one of the events to parse: ";
