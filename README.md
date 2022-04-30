@@ -1,6 +1,6 @@
 # smashgg-elo
 
-A reimplementation of an earlier program written in Python using Rust for the purpose of learning the language. The python implementation can be seen [here](https://github.com/bdangnguyen/smash-gg-elo). This program queries the api for https://smash.gg tournament data, parses it, calculates and ranks players using the [Elo rating system](https://en.wikipedia.org/wiki/Elo_rating_system), and records all data into a local sqlite database.
+A reimplementation of an earlier program written in Python using Rust for the purpose of learning the language. This program queries the api for https://smash.gg tournament data, parses it, calculates and ranks players using the [Elo rating system](https://en.wikipedia.org/wiki/Elo_rating_system), and records all data into a local sqlite database.
 
 Using [DB Browser](https://sqlitebrowser.org/), this is what the sqlite database looks like after parsing through a few local tournaments
 ![Demo](https://user-images.githubusercontent.com/31323380/166092573-3e8dd0e9-3648-4951-915d-af601b055562.jpg)
