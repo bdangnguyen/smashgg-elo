@@ -10,7 +10,7 @@ mod rusqlite_wrapper;
 const PLAYERS: &str = "players";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Smash.gg Elo Parser 1.0");
+    println!("Smash.gg Elo Parser 1.0.1");
 
     // Init relevant objects
     let mut reqwest_client = ReqwestClient::new();
