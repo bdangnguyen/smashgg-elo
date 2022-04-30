@@ -159,7 +159,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             // If this is the last match, this is grand finals. Therefore
             // whoever has the larger score won the tournament.
-            if count == set_list.len() {
+            if count == set_list.len() - 1 {
                 if set.player_one_score > set.player_two_score {
                     rusqlite_connection
                         .assign_winner(player_one_global_id,
